@@ -1,0 +1,362 @@
+/* Enhanced BookService.css */
+:root {
+  --bg-color: #f8f9fa;
+  --text-color: #2d3436;
+  --primary-color: #0984e3;
+  --accent-color: #00b894;
+  --hover-color: #74b9ff;
+  --danger-color: #d63031;
+  --footer-bg: #6c5ce7;
+  --card-bg: #ffffff;
+  --border-radius: 12px;
+  --box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+[data-theme="dark"] {
+  --bg-color: #121212;
+  --text-color: #f5f6fa;
+  --primary-color: #487eb0;
+  --accent-color: #44bd32;
+  --hover-color: #40739e;
+  --danger-color: #e84118;
+  --footer-bg: #8c7ae6;
+  --card-bg: #1e272e;
+}
+
+.book-service {
+  padding: 2rem 1rem;
+  max-width: 1000px;
+  margin: 0 auto;
+  font-family: 'Poppins', sans-serif;
+  background: var(--bg-color);
+  min-height: 100vh;
+}
+
+.book-service h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--text-color);
+  font-size: 2.5rem;
+  font-weight: 700;
+  position: relative;
+  padding-bottom: 15px;
+}
+
+.book-service h1::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+  border-radius: 2px;
+}
+
+/* Tabs - Enhanced with icons */
+.tabs {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  flex-wrap: wrap;
+}
+
+.tabs button {
+  padding: 1rem 2rem;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: var(--border-radius);
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: var(--box-shadow);
+  font-size: 1rem;
+}
+
+.tabs button:hover {
+  background-color: var(--hover-color);
+  transform: translateY(-3px);
+}
+
+.tabs button::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+.tabs button:nth-child(1)::before {
+  content: '\f2a6'; /* Washing icon */
+}
+
+.tabs button:nth-child(2)::before {
+  content: '\f2a6\f0c4'; /* Washing + Ironing icon */
+}
+
+.tabs button:nth-child(3)::before {
+  content: '\f2b9'; /* Dry cleaning icon */
+}
+
+/* Modal - Enhanced with better visuals */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(5px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.modal-content {
+  background: var(--card-bg);
+  color: var(--text-color);
+  padding: 2.5rem;
+  border-radius: var(--border-radius);
+  width: 90%;
+  max-width: 600px;
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.2);
+  max-height: 90vh;
+  overflow-y: auto;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+}
+
+.modal-content h2 {
+  text-align: center;
+  margin-bottom: 2rem;
+  color: var(--primary-color);
+  font-size: 1.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-content h2::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+.modal-content[data-service="washing"] h2::before {
+  content: '\f2a6';
+}
+
+.modal-content[data-service="washingIroning"] h2::before {
+  content: '\f2a6\f0c4';
+}
+
+.modal-content[data-service="dryCleaning"] h2::before {
+  content: '\f2b9';
+}
+
+/* Items - Enhanced with better styling */
+.item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  border-radius: var(--border-radius);
+  background: rgba(0, 0, 0, 0.03);
+  transition: var(--transition);
+}
+
+.item:hover {
+  background: rgba(0, 0, 0, 0.07);
+  transform: translateX(5px);
+}
+
+.item span {
+  font-size: 1.1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.item span::before {
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  color: var(--primary-color);
+}
+
+.item:nth-child(1) span::before { content: '\f553'; } /* Shirt */
+.item:nth-child(2) span::before { content: '\f553'; } /* T-Shirt */
+.item:nth-child(3) span::before { content: '\f553'; } /* Jeans */
+.item:nth-child(4) span::before { content: '\f553'; } /* Pant */
+.item:nth-child(5) span::before { content: '\f72a'; } /* Saree */
+.item:nth-child(6) span::before { content: '\f553'; } /* Coat */
+
+.quantity-buttons {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.quantity-buttons button {
+  background-color: var(--accent-color);
+  border: none;
+  color: white;
+  padding: 0.4rem 0.9rem;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1.1rem;
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+}
+
+.quantity-buttons button:hover {
+  background-color: var(--hover-color);
+  transform: scale(1.1);
+}
+
+.quantity-buttons span {
+  font-size: 1.1rem;
+  min-width: 30px;
+  text-align: center;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+/* Modal Summary - Enhanced */
+.modal-summary {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 2px dashed rgba(0, 0, 0, 0.1);
+  text-align: center;
+}
+
+.modal-summary h3 {
+  margin-bottom: 1.5rem;
+  font-size: 1.4rem;
+  color: var(--primary-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.modal-summary h3::before {
+  content: '\f155';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+.done-btn {
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  border: none;
+  color: white;
+  padding: 0.8rem 2rem;
+  border-radius: 50px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--transition);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.done-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+}
+
+.done-btn::before {
+  content: '\f058';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+}
+
+/* Footer - Enhanced */
+.summary-footer {
+  text-align: center;
+  margin-top: 3rem;
+}
+
+.cart-link {
+  background: linear-gradient(135deg, var(--footer-bg), #a55eea);
+  color: white;
+  padding: 1rem 2.5rem;
+  border-radius: 50px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 5px 20px rgba(108, 92, 231, 0.3);
+}
+
+.cart-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(108, 92, 231, 0.4);
+}
+
+.cart-link::before {
+  content: '\f07a';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 1.2rem;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(30px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .book-service h1 {
+    font-size: 2rem;
+  }
+  
+  .tabs {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .tabs button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .modal-content {
+    padding: 1.5rem;
+    width: 95%;
+  }
+  
+  .item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  
+  .quantity-buttons {
+    align-self: flex-end;
+  }
+}
+
