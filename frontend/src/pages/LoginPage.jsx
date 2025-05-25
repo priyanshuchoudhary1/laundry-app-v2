@@ -1,10 +1,10 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { FaUser, FaUserShield } from 'react-icons/fa';
-import './Login.css';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { useAuth } from "../context/AuthContext";
+import { FaUser, FaUserShield, FaLock } from "react-icons/fa";
+import "./../styles/Login.css";
 
-function Login() {
+const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -43,19 +43,29 @@ function Login() {
         throw new Error(data.message || 'Login failed');
       }
 
-      if (!data.success || !data.user) {
+      if (!data.success || !data.user || !data.token) {
         throw new Error('Invalid response from server');
       }
 
+      // Check if user is trying to login as admin in user mode or vice versa
+      if (isAdmin && data.user.role !== 'admin') {
+        throw new Error('Invalid admin credentials');
+      } else if (!isAdmin && data.user.role === 'admin') {
+        throw new Error('Please use admin login for admin accounts');
+      }
+
+      // Store token in localStorage
+      localStorage.setItem('token', data.token);
+
       // Update auth context with user data
-      const loginResult = login(data.user);
+      const loginResult = login({ ...data.user, token: data.token });
       
       if (loginResult.success) {
         // Navigate based on user role
         if (data.user.role === 'admin') {
-          navigate('/admin');
+          navigate('/admin-dashboard', { replace: true });
         } else {
-          navigate('/account');
+          navigate('/account', { replace: true });
         }
       } else {
         throw new Error(loginResult.error || 'Failed to update user state');
@@ -63,6 +73,8 @@ function Login() {
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message || 'Failed to log in');
+      // Clear any existing token on error
+      localStorage.removeItem('token');
     } finally {
       setLoading(false);
     }
@@ -85,36 +97,43 @@ function Login() {
         </button>
       </div>
 
-      <h2>{isAdmin ? 'Admin Login' : 'User Login'}</h2>
-      {error && <p className="error-message">{error}</p>}
-      <form onSubmit={handleSubmit}>
-        <div className="input-group">
-          <label htmlFor="email">Email</label>
-          <input
-            type="email"
-            id="email"
+      <form className="login-form" onSubmit={handleSubmit}>
+        <h2>
+          {isAdmin ? (
+            <><FaUserShield /> Admin Login</>
+          ) : (
+            <><FaUser /> User Login</>
+          )}
+        </h2>
+        
+        {error && <p className="error-message">{error}</p>}
+        
+        <div className="input-icon">
+          <FaUser />
+          <input 
+            type="email" 
+            placeholder="Email" 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="Enter your email"
-            required
+            required 
           />
         </div>
-        <div className="input-group">
-          <label htmlFor="password">Password</label>
-          <input
-            type="password"
-            id="password"
+        <div className="input-icon">
+          <FaLock />
+          <input 
+            type="password" 
+            placeholder="Password" 
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Enter your password"
-            required
+            required 
           />
         </div>
         <button type="submit" disabled={loading}>
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>
-      <div className="links">
+
+      <div className="login-links">
         <Link to="/forgot-password">Forgot Password?</Link>
         {!isAdmin && (
           <p>Don't have an account? <Link to="/signup">Sign Up</Link></p>
@@ -122,6 +141,6 @@ function Login() {
       </div>
     </div>
   );
-}
+};
 
-export default Login;
+export default LoginPage; 

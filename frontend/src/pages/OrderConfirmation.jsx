@@ -1,10 +1,18 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { Link, useLocation } from 'react-router-dom';
 import './OrderConfirmation.css';
 
 const OrderConfirmation = () => {
-  const orderNumber = Math.floor(100000 + Math.random() * 900000); // Generate random order number
-  
+  const [orderId, setOrderId] = useState('');
+  const location = useLocation();
+
+  useEffect(() => {
+    // Get the order ID from the location state
+    if (location.state && location.state.orderId) {
+      setOrderId(location.state.orderId);
+    }
+  }, [location]);
+
   return (
     <div className="confirmation-container">
       <div className="confirmation-icon">
@@ -15,7 +23,7 @@ const OrderConfirmation = () => {
       </div>
       
       <h1>Order Confirmed!</h1>
-      <p className="order-number">Order #<span>{orderNumber}</span></p>
+      <p className="order-number">Order #<span>{orderId}</span></p>
       <p className="order-message">
         Thank you for your order. We've received your payment and your laundry service request has been confirmed.
       </p>
@@ -30,7 +38,7 @@ const OrderConfirmation = () => {
       </div>
       
       <div className="confirmation-actions">
-        <Link to="/track-order" className="action-button primary">
+        <Link to="/track-order" state={{ orderId }} className="action-button primary">
           Track Your Order
         </Link>
         <Link to="/" className="action-button secondary">

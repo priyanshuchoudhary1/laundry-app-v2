@@ -1,7 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 import './TrackOrder.css';
 
 const TrackOrder = () => {
+  const { user } = useAuth();
+  const location = useLocation();
   const [orderId, setOrderId] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [orderDetails, setOrderDetails] = useState(null);
@@ -9,17 +13,25 @@ const TrackOrder = () => {
   const [animateTimeline, setAnimateTimeline] = useState(false);
   const inputRef = useRef(null);
 
+  // Set order ID from location state if available
+  useEffect(() => {
+    if (location.state && location.state.orderId) {
+      setOrderId(location.state.orderId);
+      // Automatically fetch order details if order ID is provided
+      handleSubmit(new Event('submit'));
+    }
+  }, [location.state]);
+
   // Focus input on component mount
   useEffect(() => {
-    if (inputRef.current) {
+    if (inputRef.current && !location.state?.orderId) {
       inputRef.current.focus();
     }
-  }, []);
+  }, [location.state]);
 
   // Effect to animate timeline after order details are loaded
   useEffect(() => {
     if (orderDetails) {
-      // Short delay to allow order details to render before animating timeline
       setTimeout(() => {
         setAnimateTimeline(true);
       }, 500);
@@ -29,17 +41,14 @@ const TrackOrder = () => {
   }, [orderDetails]);
 
   const handleInputChange = (e) => {
-    // Only allow numbers in the input
-    const value = e.target.value.replace(/\D/g, '');
-    setOrderId(value);
+    setOrderId(e.target.value);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (isLoading) return; // Prevent multiple submissions
+    if (isLoading) return;
     
-    // Validate input
     if (!orderId.trim()) {
       setError('Please enter an order ID');
       return;
@@ -51,53 +60,133 @@ const TrackOrder = () => {
     setAnimateTimeline(false);
 
     try {
-      const response = await fetch(`/api/orders/${orderId}`);
+      const response = await fetch(`http://localhost:4000/api/orders/${orderId}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
       const data = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Order not found');
+        throw new Error(data.message || 'Order not found');
       }
       
-      setOrderDetails(data.data);
+      if (data.success) {
+        // Transform the data to match our frontend format
+        const orderWithHistory = {
+          _id: data.data.orderId,
+          customerName: data.data.customerName,
+          status: data.data.status,
+          createdAt: data.data.createdAt,
+          totalAmount: data.data.totalAmount,
+          items: data.data.items,
+          history: data.data.orderHistory.map(history => ({
+            action: history.action,
+            timestamp: history.timestamp,
+            details: history.details,
+            completed: true
+          })),
+          statusTimeline: data.data.statusTimeline.map(timeline => ({
+            action: timeline.status,
+            timestamp: new Date(timeline.date).getTime(),
+            completed: timeline.completed,
+            details: timeline.notes || ''
+          }))
+        };
+        setOrderDetails(orderWithHistory);
+      } else {
+        throw new Error(data.message || 'Failed to fetch order details');
+      }
     } catch (err) {
       setError(err.message || 'Error fetching order. Please try again.');
+      setOrderDetails(null);
     } finally {
       setIsLoading(false);
     }
   };
 
   const getStatusClass = (status) => {
-    switch (status) {
-      case 'Scheduled':
+    switch (status.toLowerCase()) {
+      case 'scheduled':
+      case 'order placed':
         return 'status-scheduled';
-      case 'In Progress':
+      case 'in progress':
+      case 'washing':
+      case 'ironing':
+      case 'quality check':
+      case 'pickup scheduled':
+      case 'items received':
         return 'status-progress';
-      case 'Delivered':
+      case 'packaging':
+      case 'out for delivery':
+        return 'status-progress';
+      case 'delivered':
         return 'status-delivered';
+      case 'cancelled':
+        return 'status-cancelled';
       default:
         return '';
     }
   };
 
-  const formatOrderId = (id) => {
-    // Format to make it more readable with spaces
-    if (id && id.length === 6) {
-      return `${id.slice(0, 3)} ${id.slice(3)}`;
-    }
-    return id;
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
   };
 
-  // Function to get emoji based on status
   const getStatusEmoji = (status) => {
-    if (status.includes('Order Placed')) return '📝';
-    if (status.includes('Pickup')) return '🚚';
-    if (status.includes('Received')) return '📦';
-    if (status.includes('Cleaning')) return '🧼';
-    if (status.includes('Quality')) return '🔍';
-    if (status.includes('Delivery')) return '🚚';
-    if (status.includes('Delivered')) return '✅';
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('placed')) return '📝';
+    if (statusLower.includes('pickup')) return '🚚';
+    if (statusLower.includes('received')) return '📦';
+    if (statusLower.includes('washing')) return '🧼';
+    if (statusLower.includes('ironing')) return '👔';
+    if (statusLower.includes('quality')) return '🔍';
+    if (statusLower.includes('packaging')) return '📦';
+    if (statusLower.includes('delivery')) return '🚚';
+    if (statusLower.includes('delivered')) return '✅';
+    if (statusLower.includes('cancelled')) return '❌';
     return '🔄';
   };
+
+  const getStatusDetails = (status, orderDetails) => {
+    const statusLower = status.toLowerCase();
+    if (statusLower.includes('washing')) {
+      return `Washing ${orderDetails.items.length} items`;
+    }
+    if (statusLower.includes('ironing')) {
+      return `Ironing ${orderDetails.items.length} items`;
+    }
+    if (statusLower.includes('quality')) {
+      return 'Quality check in progress';
+    }
+    if (statusLower.includes('packaging')) {
+      return 'Items being packaged for delivery';
+    }
+    if (statusLower.includes('delivery')) {
+      return 'Out for delivery';
+    }
+    return '';
+  };
+
+  const renderNoOrders = () => (
+    <div className="no-orders-message">
+      <div className="no-orders-icon">��</div>
+      <h2>No Orders Found</h2>
+      <p>You haven't placed any orders yet or the order ID is incorrect.</p>
+      <div className="no-orders-actions">
+        <button onClick={() => navigate('/services')} className="browse-services-btn">
+          Browse Services
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="track-order-container">
@@ -117,9 +206,9 @@ const TrackOrder = () => {
                 type="text"
                 value={orderId}
                 onChange={handleInputChange}
-                placeholder="Enter your 6-digit order ID here"
+                placeholder="Enter your order ID here"
                 className="order-input"
-                maxLength="6"
+                maxLength="24"
                 aria-label="Order ID"
                 disabled={isLoading}
               />
@@ -143,12 +232,12 @@ const TrackOrder = () => {
 
         {error && <div className="error-message">{error}</div>}
 
-        {orderDetails && (
+        {orderDetails ? (
           <div className="order-details">
             <div className="order-header">
               <div>
-                <h2>Order #{formatOrderId(orderDetails.id)}</h2>
-                <p className="order-date">Placed on: {orderDetails.date}</p>
+                <h2>Order #{orderDetails._id}</h2>
+                <p className="order-date">Placed on: {formatDate(orderDetails.createdAt)}</p>
               </div>
               <div className={`order-status ${getStatusClass(orderDetails.status)}`}>
                 {orderDetails.status}
@@ -172,34 +261,44 @@ const TrackOrder = () => {
                 {orderDetails.items.map((item, index) => (
                   <div key={index} className="item">
                     <div className="item-name">{item.name} × {item.quantity}</div>
-                    <div className="item-price">₹{item.price}</div>
+                    <div className="item-price">₹{item.price * item.quantity}</div>
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="order-timeline">
-              <h3>Status Timeline</h3>
-              <div className="timeline">
-                {orderDetails.statusTimeline.map((step, index) => (
-                  <div 
-                    key={index} 
-                    className={`timeline-item ${step.completed ? 'completed' : ''} ${animateTimeline ? 'animate' : ''}`}
-                    style={{ animationDelay: `${index * 0.2}s` }}
-                  >
-                    <div className="timeline-marker">
-                      {step.completed ? '✓' : getStatusEmoji(step.status)}
+            {orderDetails.history && orderDetails.history.length > 0 && (
+              <div className="order-timeline">
+                <h3>Status Timeline</h3>
+                <div className="timeline">
+                  {orderDetails.history.map((step, index) => (
+                    <div 
+                      key={index} 
+                      className={`timeline-item ${step.completed ? 'completed' : ''} ${animateTimeline ? 'animate' : ''}`}
+                      style={{ animationDelay: `${index * 0.2}s` }}
+                    >
+                      <div className="timeline-marker">
+                        {step.completed ? '✓' : getStatusEmoji(step.action)}
+                      </div>
+                      <div className="timeline-content">
+                        <div className="timeline-title">{step.action}</div>
+                        <div className="timeline-date">{formatDate(step.timestamp)}</div>
+                        {step.details && (
+                          <div className="timeline-details">{step.details}</div>
+                        )}
+                        {!step.details && (
+                          <div className="timeline-details">
+                            {getStatusDetails(step.action, orderDetails)}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <div className="timeline-content">
-                      <div className="timeline-title">{step.status}</div>
-                      <div className="timeline-date">{step.date}</div>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
           </div>
-        )}
+        ) : !isLoading && !error && renderNoOrders()}
       </div>
     </div>
   );

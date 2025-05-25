@@ -104,22 +104,6 @@ orderSchema.pre('save', function(next) {
   next();
 });
 
-// Generate a unique 6-digit order ID
-orderSchema.pre('save', async function(next) {
-  if (!this.orderId) {
-    let isUnique = false;
-    while (!isUnique) {
-      const randomNum = Math.floor(100000 + Math.random() * 900000);
-      const existingOrder = await this.constructor.findOne({ orderId: randomNum.toString() });
-      if (!existingOrder) {
-        this.orderId = randomNum.toString();
-        isUnique = true;
-      }
-    }
-  }
-  next();
-});
-
 // Add to order history before saving
 orderSchema.pre('save', function(next) {
   if (this.isNew) {

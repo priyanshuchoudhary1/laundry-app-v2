@@ -7,9 +7,42 @@
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
 }
 
+.login-type-selector {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.login-type-btn {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  background: white;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+}
+
+.login-type-btn.active {
+  background: #4caf50;
+  color: white;
+  border-color: #4caf50;
+}
+
+.login-type-btn:hover {
+  background: #45a049;
+  color: white;
+  border-color: #45a049;
+}
+
 h2 {
   text-align: center;
   margin-bottom: 20px;
+  color: #333;
 }
 
 .input-group {
@@ -19,6 +52,7 @@ h2 {
 .input-group label {
   display: block;
   margin-bottom: 5px;
+  color: #555;
 }
 
 .input-group input {
@@ -26,20 +60,35 @@ h2 {
   padding: 10px;
   border: 1px solid #ccc;
   border-radius: 4px;
+  font-size: 16px;
 }
 
-button {
+.input-group input:focus {
+  outline: none;
+  border-color: #4caf50;
+  box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+button[type="submit"] {
   width: 100%;
-  padding: 10px;
+  padding: 12px;
   background-color: #4caf50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: background-color 0.3s ease;
 }
 
-button:hover {
+button[type="submit"]:hover {
   background-color: #45a049;
+}
+
+button[type="submit"]:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
 }
 
 .links {
@@ -50,4 +99,19 @@ button:hover {
 .links a {
   color: #4caf50;
   text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.links a:hover {
+  color: #45a049;
+  text-decoration: underline;
+}
+
+.error-message {
+  color: #f44336;
+  background-color: #ffebee;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 15px;
+  text-align: center;
 }

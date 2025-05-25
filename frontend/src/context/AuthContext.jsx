@@ -15,18 +15,23 @@ export const AuthProvider = ({ children }) => {
 
   const checkAuth = async () => {
     try {
+      const token = localStorage.getItem('token');
       const userData = localStorage.getItem('userData');
       
-      if (userData) {
+      if (token && userData) {
         const parsedUserData = JSON.parse(userData);
         setUser(parsedUserData);
       } else {
         setUser(null);
+        localStorage.removeItem('token');
+        localStorage.removeItem('userData');
       }
     } catch (err) {
       console.error('Auth check error:', err);
       setError(err.message);
       setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
     } finally {
       setLoading(false);
     }
@@ -67,6 +72,7 @@ export const AuthProvider = ({ children }) => {
 
       // Store in localStorage
       localStorage.setItem('userData', JSON.stringify(userData));
+      localStorage.setItem('token', userData.token);
       
       // Update state immediately
       setUser(userData);
@@ -82,6 +88,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = () => {
     try {
+      localStorage.removeItem('token');
       localStorage.removeItem('userData');
       setUser(null);
       setError(null);
@@ -118,7 +125,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     register,
-    updateUser
+    updateUser,
+    checkAuth
   };
 
   return (

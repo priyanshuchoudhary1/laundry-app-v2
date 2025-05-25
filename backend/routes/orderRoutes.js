@@ -37,7 +37,16 @@ router.post('/', async (req, res) => {
     }
 
     // Generate a unique order ID
-    const orderId = Math.floor(100000 + Math.random() * 900000).toString();
+    let orderId;
+    let isUnique = false;
+    while (!isUnique) {
+      const randomNum = Math.floor(100000 + Math.random() * 900000);
+      const existingOrder = await Order.findOne({ orderId: randomNum.toString() });
+      if (!existingOrder) {
+        orderId = randomNum.toString();
+        isUnique = true;
+      }
+    }
 
     // Create initial status timeline
     const statusTimeline = [

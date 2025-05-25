@@ -4,6 +4,10 @@ const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
+const jwt = require('jsonwebtoken');
+
+// JWT Secret Key
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 
 // Configure multer for file upload
 const storage = multer.diskStorage({
@@ -32,7 +36,7 @@ const upload = multer({
 // Register a new user
 router.post('/register', async (req, res) => {
   try {
-    const { name, email, password, phone, address } = req.body;
+    const { name, email, password, phone, address, adminCode } = req.body;
     
     // Check if user already exists
     const existingUser = await User.findOne({ email });
@@ -43,17 +47,24 @@ router.post('/register', async (req, res) => {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // Check if this is an admin registration
+    const isAdmin = adminCode === 'ADMIN123'; // You can change this code to something more secure
+
     // Create new user
     const user = new User({
       name,
       email,
       password: hashedPassword,
       phone,
-      address
+      address,
+      role: isAdmin ? 'admin' : 'user'
     });
 
     await user.save();
-    res.status(201).json({ message: 'User created successfully' });
+    res.status(201).json({ 
+      success: true,
+      message: isAdmin ? 'Admin account created successfully' : 'User created successfully'
+    });
   } catch (error) {
     res.status(500).json({ message: 'Error creating user', error: error.message });
   }
@@ -62,7 +73,7 @@ router.post('/register', async (req, res) => {
 // Login user
 router.post('/login', async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, isAdmin } = req.body;
     
     // Find user
     const user = await User.findOne({ email });
@@ -70,11 +81,27 @@ router.post('/login', async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
+    // Check if user is trying to login as admin
+    if (isAdmin && user.role !== 'admin') {
+      return res.status(403).json({ message: 'Access denied. Admin privileges required.' });
+    }
+
     // Check password
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
+
+    // Generate JWT token
+    const token = jwt.sign(
+      { 
+        userId: user._id,
+        email: user.email,
+        role: user.role
+      },
+      JWT_SECRET,
+      { expiresIn: '24h' }
+    );
 
     // Return user data without password
     const userData = {
@@ -85,12 +112,14 @@ router.post('/login', async (req, res) => {
       address: user.address,
       profileImage: user.profileImage,
       paymentMethods: user.paymentMethods,
-      laundryPreferences: user.laundryPreferences
+      laundryPreferences: user.laundryPreferences,
+      role: user.role || 'user'
     };
 
     res.json({ 
       success: true,
       message: 'Login successful', 
+      token,
       userId: user._id,
       user: userData
     });
@@ -203,16 +232,17 @@ router.post('/payment-methods/:userId', async (req, res) => {
       newPaymentMethod.phoneNumber = phoneNumber;
     }
 
-    // Add payment method to user
+    // Add the new payment method
     user.paymentMethods.push(newPaymentMethod);
     await user.save();
 
-    // Return the updated user without password
-    const updatedUser = await User.findById(userId).select('-password');
-    res.status(201).json({ 
+    res.json({ 
       success: true, 
       message: 'Payment method added successfully',
-      user: updatedUser
+      user: {
+        ...user.toObject(),
+        password: undefined
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -244,40 +274,39 @@ router.delete('/payment-methods/:userId/:methodId', async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    
+
     // Find the payment method
-    const methodIndex = user.paymentMethods.findIndex(
-      method => method._id.toString() === methodId
-    );
-    
-    if (methodIndex === -1) {
+    const paymentMethod = user.paymentMethods.id(methodId);
+    if (!paymentMethod) {
       return res.status(404).json({ success: false, error: 'Payment method not found' });
     }
-    
-    // Check if we're removing a default method
-    const isDefault = user.paymentMethods[methodIndex].isDefault;
-    
-    // Remove the payment method
-    user.paymentMethods.splice(methodIndex, 1);
-    
-    // If we removed the default method and there are other methods, make another one default
-    if (isDefault && user.paymentMethods.length > 0) {
-      user.paymentMethods[0].isDefault = true;
+
+    // If this was the default payment method, set another one as default
+    if (paymentMethod.isDefault && user.paymentMethods.length > 1) {
+      const nextPaymentMethod = user.paymentMethods.find(method => method._id.toString() !== methodId);
+      if (nextPaymentMethod) {
+        nextPaymentMethod.isDefault = true;
+      }
     }
-    
+
+    // Remove the payment method
+    user.paymentMethods = user.paymentMethods.filter(method => method._id.toString() !== methodId);
     await user.save();
-    
+
     res.json({ 
       success: true, 
       message: 'Payment method removed successfully',
-      user: await User.findById(userId).select('-password')
+      user: {
+        ...user.toObject(),
+        password: undefined
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Set a payment method as default
+// Set default payment method
 router.put('/payment-methods/:userId/:methodId/default', async (req, res) => {
   try {
     const { userId, methodId } = req.params;
@@ -286,28 +315,29 @@ router.put('/payment-methods/:userId/:methodId/default', async (req, res) => {
     if (!user) {
       return res.status(404).json({ success: false, error: 'User not found' });
     }
-    
-    // First set all payment methods as non-default
+
+    // Find the payment method
+    const paymentMethod = user.paymentMethods.id(methodId);
+    if (!paymentMethod) {
+      return res.status(404).json({ success: false, error: 'Payment method not found' });
+    }
+
+    // Set all payment methods to non-default
     user.paymentMethods.forEach(method => {
       method.isDefault = false;
     });
-    
-    // Find and set the specified method as default
-    const method = user.paymentMethods.find(
-      method => method._id.toString() === methodId
-    );
-    
-    if (!method) {
-      return res.status(404).json({ success: false, error: 'Payment method not found' });
-    }
-    
-    method.isDefault = true;
+
+    // Set the selected payment method as default
+    paymentMethod.isDefault = true;
     await user.save();
-    
+
     res.json({ 
       success: true, 
-      message: 'Default payment method updated',
-      user: await User.findById(userId).select('-password')
+      message: 'Default payment method updated successfully',
+      user: {
+        ...user.toObject(),
+        password: undefined
+      }
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });

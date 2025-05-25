@@ -75,7 +75,12 @@ const Account = () => {
       });
       
       setPaymentMethods(user.paymentMethods || []);
-      setProfileImage(user.profileImage || null);
+      if (user.profileImage) {
+        const fullImageUrl = user.profileImage.startsWith('http') 
+          ? user.profileImage 
+          : `http://localhost:4000${user.profileImage}`;
+        setProfileImage(fullImageUrl);
+      }
       
       fetchLaundryPreferences();
       if (activeTab === 'orders') {
@@ -297,12 +302,22 @@ const Account = () => {
     setError('');
     
     try {
-      // Send payment method to the backend
-      const response = await addPaymentMethod(user._id, newPaymentMethod);
+      const response = await fetch(`http://localhost:4000/api/users/payment-methods/${user._id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(newPaymentMethod)
+      });
+
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         // Update the local state with the payment methods from the response
-        setPaymentMethods(response.user.paymentMethods);
+        setPaymentMethods(data.user.paymentMethods);
+        // Update the user context with the new payment methods
+        updateUser({ ...user, paymentMethods: data.user.paymentMethods });
         setIsAddingPayment(false);
         setSuccess('Payment method added successfully!');
         
@@ -318,7 +333,7 @@ const Account = () => {
           paypalEmail: ''
         });
       } else {
-        throw new Error(response.error || 'Failed to add payment method');
+        throw new Error(data.error || 'Failed to add payment method');
       }
     } catch (err) {
       setError(err.message || 'Failed to add payment method. Please try again.');
@@ -332,14 +347,23 @@ const Account = () => {
     setError('');
     
     try {
-      const response = await deletePaymentMethod(user._id, methodId);
+      const response = await fetch(`http://localhost:4000/api/users/payment-methods/${user._id}/${methodId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         // Update local state with response data
-        setPaymentMethods(response.user.paymentMethods);
+        setPaymentMethods(data.user.paymentMethods);
+        // Update the user context with the new payment methods
+        updateUser({ ...user, paymentMethods: data.user.paymentMethods });
         setSuccess('Payment method removed successfully!');
       } else {
-        throw new Error(response.error || 'Failed to remove payment method');
+        throw new Error(data.error || 'Failed to remove payment method');
       }
     } catch (err) {
       setError(err.message || 'Failed to remove payment method. Please try again.');
@@ -353,14 +377,23 @@ const Account = () => {
     setError('');
     
     try {
-      const response = await setDefaultPaymentMethod(user._id, methodId);
+      const response = await fetch(`http://localhost:4000/api/users/payment-methods/${user._id}/${methodId}/default`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+
+      const data = await response.json();
       
-      if (response.success) {
+      if (data.success) {
         // Update local state with response data
-        setPaymentMethods(response.user.paymentMethods);
+        setPaymentMethods(data.user.paymentMethods);
+        // Update the user context with the new payment methods
+        updateUser({ ...user, paymentMethods: data.user.paymentMethods });
         setSuccess('Default payment method updated!');
       } else {
-        throw new Error(response.error || 'Failed to update default payment method');
+        throw new Error(data.error || 'Failed to update default payment method');
       }
     } catch (err) {
       setError(err.message || 'Failed to update default payment method. Please try again.');
@@ -412,33 +445,46 @@ const Account = () => {
 
     // Validate file type
     if (!file.type.startsWith('image/')) {
-      setError('Please upload an image file');
+      setError('Please select an image file');
       return;
     }
 
-    // Validate file size (max 5MB)
+    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       setError('Image size should be less than 5MB');
       return;
     }
 
-    setIsUploading(true);
-    setError('');
-
     try {
+      setIsUploading(true);
+      setError('');
+      setSuccess('');
+
       const formData = new FormData();
       formData.append('profileImage', file);
 
-      const response = await updateUserProfile(user._id, formData);
-      
-      if (response.success) {
-        setProfileImage(response.user.profileImage);
-        setSuccess('Profile image updated successfully!');
+      const response = await fetch(`http://localhost:4000/api/users/profile-image/${user._id}`, {
+        method: 'PUT',
+        body: formData
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Ensure we have the full URL for the profile image
+        const fullImageUrl = data.user.profileImage.startsWith('http')
+          ? data.user.profileImage
+          : `http://localhost:4000${data.user.profileImage}`;
+        setProfileImage(fullImageUrl);
+        setSuccess('Profile image updated successfully');
+        // Update user context with new profile image
+        updateUser({ ...user, profileImage: fullImageUrl });
       } else {
-        throw new Error(response.error || 'Failed to update profile image');
+        setError(data.error || 'Failed to update profile image');
       }
     } catch (err) {
-      setError(err.message || 'Failed to update profile image. Please try again.');
+      setError('Error uploading image');
+      console.error('Upload error:', err);
     } finally {
       setIsUploading(false);
     }

@@ -257,9 +257,9 @@ const BasicPayment = () => {
       setPaymentSuccess(true);
       clearCart();
       
-      // Redirect after successful payment
+      // Redirect after successful payment with order ID
       setTimeout(() => {
-        navigate('/order-confirmation');
+        navigate('/order-confirmation', { state: { orderId: data.data.orderId } });
       }, 2000);
     } catch (err) {
       console.error('Payment error:', err);
