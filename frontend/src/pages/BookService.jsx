@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import "./BookService.css";
+import "../styles/pages/BookService.css";
 import { useCart } from "../context/CartContext";  // ✅ Required for syncing with cart
 import { Link } from "react-router-dom";           // ✅ Required for "Go to Cart" button
 

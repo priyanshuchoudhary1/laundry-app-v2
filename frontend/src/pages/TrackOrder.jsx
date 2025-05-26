@@ -1,33 +1,26 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useLocation } from 'react-router-dom';
-import './TrackOrder.css';
+import { useLocation, useNavigate } from 'react-router-dom';
+import '../styles/pages/TrackOrder.css';
 
 const TrackOrder = () => {
   const { user } = useAuth();
   const location = useLocation();
-  const [orderId, setOrderId] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(true);
   const [orderDetails, setOrderDetails] = useState(null);
   const [error, setError] = useState('');
   const [animateTimeline, setAnimateTimeline] = useState(false);
-  const inputRef = useRef(null);
 
-  // Set order ID from location state if available
   useEffect(() => {
-    if (location.state && location.state.orderId) {
-      setOrderId(location.state.orderId);
-      // Automatically fetch order details if order ID is provided
-      handleSubmit(new Event('submit'));
+    // If no order ID in location state, redirect back
+    if (!location.state?.orderId) {
+      navigate('/account', { state: { activeTab: 'orders' } });
+      return;
     }
-  }, [location.state]);
 
-  // Focus input on component mount
-  useEffect(() => {
-    if (inputRef.current && !location.state?.orderId) {
-      inputRef.current.focus();
-    }
-  }, [location.state]);
+    fetchOrderDetails(location.state.orderId);
+  }, [location.state?.orderId, navigate]);
 
   // Effect to animate timeline after order details are loaded
   useEffect(() => {
@@ -40,20 +33,7 @@ const TrackOrder = () => {
     }
   }, [orderDetails]);
 
-  const handleInputChange = (e) => {
-    setOrderId(e.target.value);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (isLoading) return;
-    
-    if (!orderId.trim()) {
-      setError('Please enter an order ID');
-      return;
-    }
-    
+  const fetchOrderDetails = async (orderId) => {
     setIsLoading(true);
     setError('');
     setOrderDetails(null);
@@ -175,130 +155,132 @@ const TrackOrder = () => {
     return '';
   };
 
-  const renderNoOrders = () => (
-    <div className="no-orders-message">
-      <div className="no-orders-icon">��</div>
-      <h2>No Orders Found</h2>
-      <p>You haven't placed any orders yet or the order ID is incorrect.</p>
-      <div className="no-orders-actions">
-        <button onClick={() => navigate('/services')} className="browse-services-btn">
-          Browse Services
-        </button>
+  if (isLoading) {
+    return (
+      <div className="track-order-container">
+        <div className="loading-container">
+          <div className="loading-spinner"></div>
+          <p>Loading order details...</p>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="track-order-container">
+        <div className="error-container">
+          <h2>Error</h2>
+          <p>{error}</p>
+          <button 
+            className="back-button"
+            onClick={() => navigate('/account', { state: { activeTab: 'orders' } })}
+          >
+            Back to Orders
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!orderDetails) {
+    return (
+      <div className="track-order-container">
+        <div className="no-orders-message">
+          <div className="no-orders-icon">📦</div>
+          <h2>Order Not Found</h2>
+          <p>The requested order could not be found.</p>
+          <button 
+            className="back-button"
+            onClick={() => navigate('/account', { state: { activeTab: 'orders' } })}
+          >
+            Back to Orders
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="track-order-container">
       <div className="track-order-header">
         <h1>Track Your Order</h1>
-        <p>Enter your order ID to check the status of your laundry services and view the progress of your items.</p>
+        <p>View the status and progress of your laundry services.</p>
       </div>
 
-      <div className="track-form-container">
-        <form onSubmit={handleSubmit} className="track-form">
-          <div className="input-group">
-            <div className="input-wrapper">
-              <label htmlFor="orderIdInput" className="input-label">Enter Your Order ID</label>
-              <input
-                id="orderIdInput"
-                ref={inputRef}
-                type="text"
-                value={orderId}
-                onChange={handleInputChange}
-                placeholder="Enter your order ID here"
-                className="order-input"
-                maxLength="24"
-                aria-label="Order ID"
-                disabled={isLoading}
-              />
-            </div>
-            <button 
-              type="submit" 
-              className="track-button" 
-              disabled={isLoading || !orderId.trim()}
-              aria-label="Track Order"
-            >
-              {isLoading ? (
-                <span className="loading-text">
-                  <span className="dot-animation">Searching</span>
-                </span>
-              ) : (
-                'TRACK ORDER'
-              )}
-            </button>
+      <div className="order-details">
+        <div className="order-header">
+          <div>
+            <h2>Order #{orderDetails._id}</h2>
+            <p className="order-date">Placed on: {formatDate(orderDetails.createdAt)}</p>
           </div>
-        </form>
+          <div className={`order-status ${getStatusClass(orderDetails.status)}`}>
+            {orderDetails.status}
+          </div>
+        </div>
 
-        {error && <div className="error-message">{error}</div>}
+        <div className="order-info">
+          <div className="info-section">
+            <h3>Customer</h3>
+            <p>{orderDetails.customerName}</p>
+          </div>
+          <div className="info-section">
+            <h3>Total Amount</h3>
+            <p>₹{orderDetails.totalAmount}</p>
+          </div>
+        </div>
 
-        {orderDetails ? (
-          <div className="order-details">
-            <div className="order-header">
-              <div>
-                <h2>Order #{orderDetails._id}</h2>
-                <p className="order-date">Placed on: {formatDate(orderDetails.createdAt)}</p>
+        <div className="order-items">
+          <h3>Items</h3>
+          <div className="items-list">
+            {orderDetails.items.map((item, index) => (
+              <div key={index} className="item">
+                <div className="item-name">{item.name} × {item.quantity}</div>
+                <div className="item-price">₹{item.price * item.quantity}</div>
               </div>
-              <div className={`order-status ${getStatusClass(orderDetails.status)}`}>
-                {orderDetails.status}
-              </div>
-            </div>
+            ))}
+          </div>
+        </div>
 
-            <div className="order-info">
-              <div className="info-section">
-                <h3>Customer</h3>
-                <p>{orderDetails.customerName}</p>
-              </div>
-              <div className="info-section">
-                <h3>Total Amount</h3>
-                <p>₹{orderDetails.totalAmount}</p>
-              </div>
-            </div>
-
-            <div className="order-items">
-              <h3>Items</h3>
-              <div className="items-list">
-                {orderDetails.items.map((item, index) => (
-                  <div key={index} className="item">
-                    <div className="item-name">{item.name} × {item.quantity}</div>
-                    <div className="item-price">₹{item.price * item.quantity}</div>
+        {orderDetails.history && orderDetails.history.length > 0 && (
+          <div className="order-timeline">
+            <h3>Status Timeline</h3>
+            <div className="timeline">
+              {orderDetails.history.map((step, index) => (
+                <div 
+                  key={index} 
+                  className={`timeline-item ${step.completed ? 'completed' : ''} ${animateTimeline ? 'animate' : ''}`}
+                  style={{ animationDelay: `${index * 0.2}s` }}
+                >
+                  <div className="timeline-marker">
+                    {step.completed ? '✓' : getStatusEmoji(step.action)}
                   </div>
-                ))}
-              </div>
-            </div>
-
-            {orderDetails.history && orderDetails.history.length > 0 && (
-              <div className="order-timeline">
-                <h3>Status Timeline</h3>
-                <div className="timeline">
-                  {orderDetails.history.map((step, index) => (
-                    <div 
-                      key={index} 
-                      className={`timeline-item ${step.completed ? 'completed' : ''} ${animateTimeline ? 'animate' : ''}`}
-                      style={{ animationDelay: `${index * 0.2}s` }}
-                    >
-                      <div className="timeline-marker">
-                        {step.completed ? '✓' : getStatusEmoji(step.action)}
+                  <div className="timeline-content">
+                    <div className="timeline-title">{step.action}</div>
+                    <div className="timeline-date">{formatDate(step.timestamp)}</div>
+                    {step.details && (
+                      <div className="timeline-details">{step.details}</div>
+                    )}
+                    {!step.details && (
+                      <div className="timeline-details">
+                        {getStatusDetails(step.action, orderDetails)}
                       </div>
-                      <div className="timeline-content">
-                        <div className="timeline-title">{step.action}</div>
-                        <div className="timeline-date">{formatDate(step.timestamp)}</div>
-                        {step.details && (
-                          <div className="timeline-details">{step.details}</div>
-                        )}
-                        {!step.details && (
-                          <div className="timeline-details">
-                            {getStatusDetails(step.action, orderDetails)}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
-        ) : !isLoading && !error && renderNoOrders()}
+        )}
+
+        <div className="track-order-actions">
+          <button 
+            className="back-button"
+            onClick={() => navigate('/account', { state: { activeTab: 'orders' } })}
+          >
+            Back to Orders
+          </button>
+        </div>
       </div>
     </div>
   );

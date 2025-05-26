@@ -5,7 +5,7 @@ import { SiGooglepay, SiPhonepe, SiPaytm } from "react-icons/si";
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
 import { Link, useNavigate } from "react-router-dom";
-import "./Cart.css";
+import '../styles/pages/Cart.css';
 
 const Cart = () => {
   const { cartItems, deleteItem } = useCart();

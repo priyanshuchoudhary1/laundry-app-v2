@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import './OrderConfirmation.css';
+import '../styles/pages/OrderConfirmation.css';
 
 const OrderConfirmation = () => {
   const [orderId, setOrderId] = useState('');

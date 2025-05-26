@@ -5,6 +5,7 @@ const bcrypt = require('bcryptjs');
 const multer = require('multer');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const { verifyAuth } = require('../middleware/auth');
 
 // JWT Secret Key
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -409,6 +410,20 @@ router.put('/preferences/:userId', async (req, res) => {
     });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Verify token endpoint
+router.get('/verify', verifyAuth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    res.json({ success: true, user });
+  } catch (error) {
+    console.error('Token verification error:', error);
+    res.status(500).json({ success: false, message: 'Token verification failed' });
   }
 });
 

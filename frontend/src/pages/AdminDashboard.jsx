@@ -1,7 +1,7 @@
 //admin password : Priyanshu@844101, id- priyanshuofficial504@gmail.com, code- ADMIN123
 
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   Box, 
@@ -66,7 +66,8 @@ import {
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
-  const { user, logout, checkAuth } = useAuth();
+  const location = useLocation();
+  const { user, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -123,45 +124,63 @@ const AdminDashboard = () => {
     navigate('/login');
   };
 
+  const handleTabChange = (tab) => {
+    if (tab !== activeTab) {
+      setActiveTab(tab);
+      navigate(`/admin-dashboard/${tab}`, { replace: true });
+    }
+  };
+
+  // Get current path and set initial tab
+  useEffect(() => {
+    const path = location.pathname;
+    const pathParts = path.split('/');
+    const currentPath = pathParts[pathParts.length - 1];
+    
+    if (currentPath === 'admin-dashboard') {
+      setActiveTab('dashboard');
+      navigate('/admin-dashboard/dashboard', { replace: true });
+    } else if (currentPath && currentPath !== activeTab && 
+               ['dashboard', 'users', 'orders', 'payments'].includes(currentPath)) {
+      setActiveTab(currentPath);
+    }
+  }, [location.pathname, navigate, activeTab]);
+
+  // Verify authentication and fetch data
   useEffect(() => {
     const verifyAuth = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          navigate('/login', { replace: true });
+        console.log('Verifying auth...', { user });
+        if (!user || user.role !== 'admin') {
+          console.log('User not authenticated or not admin');
+          navigate('/login');
           return;
         }
 
-        await checkAuth();
-        
-        if (!user) {
-          navigate('/login', { replace: true });
-          return;
-        }
-
-        if (user.role !== 'admin') {
-          navigate('/account', { replace: true });
-          return;
-        }
-
-        if (!dataFetched) {
-          await fetchDashboardData();
-          setDataFetched(true);
-        }
+        // Always fetch data when component mounts or user changes
+        console.log('Fetching dashboard data...');
+        await fetchDashboardData();
       } catch (error) {
         console.error('Auth verification error:', error);
-        navigate('/login', { replace: true });
+        if (error.message.includes('Authentication') || error.message.includes('token')) {
+          localStorage.removeItem('token');
+          navigate('/login');
+        } else {
+          setError(error.message);
+        }
       } finally {
         setLoading(false);
       }
     };
 
     verifyAuth();
-  }, [user, navigate, checkAuth, dataFetched]);
+  }, [user, navigate]);
 
   const fetchDashboardData = async () => {
     try {
       const token = localStorage.getItem('token');
+      console.log('Fetching dashboard data with token:', token);
+      
       if (!token) {
         console.error('No token found');
         setError('Authentication required');
@@ -174,88 +193,87 @@ const AdminDashboard = () => {
         'Content-Type': 'application/json'
       };
 
-      // Fetch dashboard stats
-      const statsResponse = await fetch('http://localhost:4000/api/admin/stats', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
+      console.log('Making API calls with headers:', headers);
+
+      // Fetch all data in parallel
+      const [statsResponse, usersResponse, ordersResponse, servicesResponse, paymentsResponse] = await Promise.all([
+        fetch('http://localhost:4000/api/admin/stats', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        }),
+        fetch('http://localhost:4000/api/admin/users', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        }),
+        fetch('http://localhost:4000/api/admin/orders', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        }),
+        fetch('http://localhost:4000/api/admin/services', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        }),
+        fetch('http://localhost:4000/api/admin/payments', {
+          method: 'GET',
+          headers,
+          credentials: 'include'
+        })
+      ]);
+
+      console.log('API Responses:', {
+        stats: statsResponse.status,
+        users: usersResponse.status,
+        orders: ordersResponse.status,
+        services: servicesResponse.status,
+        payments: paymentsResponse.status
       });
 
-      if (!statsResponse.ok) {
-        const errorData = await statsResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch stats');
+      // Check if any response is not ok
+      if (!statsResponse.ok || !usersResponse.ok || !ordersResponse.ok || !servicesResponse.ok || !paymentsResponse.ok) {
+        const errorResponse = !statsResponse.ok ? statsResponse :
+                            !usersResponse.ok ? usersResponse :
+                            !ordersResponse.ok ? ordersResponse :
+                            !servicesResponse.ok ? servicesResponse :
+                            paymentsResponse;
+        
+        const errorData = await errorResponse.json();
+        console.error('API Error:', errorData);
+        throw new Error(errorData.message || 'Failed to fetch data');
       }
 
-      const statsData = await statsResponse.json();
-      setStats(statsData.stats);
+      // Parse all responses
+      const [statsData, usersData, ordersData, servicesData, paymentsData] = await Promise.all([
+        statsResponse.json(),
+        usersResponse.json(),
+        ordersResponse.json(),
+        servicesResponse.json(),
+        paymentsResponse.json()
+      ]);
 
-      // Fetch recent users
-      const usersResponse = await fetch('http://localhost:4000/api/admin/users', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
+      console.log('Parsed API Data:', {
+        stats: statsData,
+        users: usersData,
+        orders: ordersData,
+        services: servicesData,
+        payments: paymentsData
       });
 
-      if (!usersResponse.ok) {
-        const errorData = await usersResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch users');
-      }
-
-      const usersData = await usersResponse.json();
-      setUsers(usersData.users);
-
-      // Fetch recent orders
-      const ordersResponse = await fetch('http://localhost:4000/api/admin/orders', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      });
-
-      if (!ordersResponse.ok) {
-        const errorData = await ordersResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch orders');
-      }
-
-      const ordersData = await ordersResponse.json();
-      setOrders(ordersData.orders);
-
-      // Fetch services
-      const servicesResponse = await fetch('http://localhost:4000/api/admin/services', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      });
-
-      if (!servicesResponse.ok) {
-        const errorData = await servicesResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch services');
-      }
-
-      const servicesData = await servicesResponse.json();
-      setServices(servicesData.services);
-
-      // Fetch payments
-      const paymentsResponse = await fetch('http://localhost:4000/api/admin/payments', {
-        method: 'GET',
-        headers,
-        credentials: 'include'
-      });
-
-      if (!paymentsResponse.ok) {
-        const errorData = await paymentsResponse.json();
-        throw new Error(errorData.message || 'Failed to fetch payments');
-      }
-
-      const paymentsData = await paymentsResponse.json();
-      setPayments(paymentsData.payments);
-
+      // Update state with fetched data
+      setStats(statsData.stats || { totalUsers: 0, totalOrders: 0, ordersToday: 0, pendingOrders: 0 });
+      setUsers(usersData.users || []);
+      setOrders(ordersData.orders || []);
+      setServices(servicesData.services || []);
+      setPayments(paymentsData.payments || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError(error.message);
       setLoading(false);
       
-      // If unauthorized, redirect to login
       if (error.message.includes('Authentication') || error.message.includes('token')) {
         localStorage.removeItem('token');
         navigate('/login');
@@ -336,58 +354,172 @@ const AdminDashboard = () => {
   };
 
   // Render Functions
-  const renderDashboardContent = () => (
-    <Grid container spacing={3}>
-      <Grid item xs={12} sm={6} md={3}>
-        <Card>
-          <CardContent>
-            <Typography color="textSecondary" gutterBottom>
-              Total Users
-            </Typography>
-            <Typography variant="h4">
-              {stats.totalUsers}
-            </Typography>
-          </CardContent>
-        </Card>
+  const renderDashboardContent = () => {
+    console.log('Rendering dashboard content:', { stats, users, orders });
+    
+    if (error) {
+      return (
+        <Box sx={{ p: 3, textAlign: 'center' }}>
+          <Typography color="error" variant="h6">
+            {error}
+          </Typography>
+        </Box>
+      );
+    }
+
+    return (
+      <Grid container spacing={3}>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Users
+              </Typography>
+              <Typography variant="h4">
+                {stats?.totalUsers || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Total Orders
+              </Typography>
+              <Typography variant="h4">
+                {stats?.totalOrders || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Orders Today
+              </Typography>
+              <Typography variant="h4">
+                {stats?.ordersToday || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+        <Grid item xs={12} sm={6} md={3}>
+          <Card>
+            <CardContent>
+              <Typography color="textSecondary" gutterBottom>
+                Pending Orders
+              </Typography>
+              <Typography variant="h4">
+                {stats?.pendingOrders || 0}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Recent Orders */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Orders
+              </Typography>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Order ID</TableCell>
+                      <TableCell>Customer</TableCell>
+                      <TableCell>Status</TableCell>
+                      <TableCell>Amount</TableCell>
+                      <TableCell>Date</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {orders && orders.length > 0 ? (
+                      orders.slice(0, 5).map((order) => (
+                        <TableRow key={order._id}>
+                          <TableCell>#{order.orderId.slice(-6)}</TableCell>
+                          <TableCell>{order.userId?.name || 'N/A'}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={order.status}
+                              color={
+                                order.status === 'completed' ? 'success' :
+                                order.status === 'pending' ? 'warning' :
+                                order.status === 'cancelled' ? 'error' : 'default'
+                              }
+                              size="small"
+                            />
+                          </TableCell>
+                          <TableCell>${order.amount}</TableCell>
+                          <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={5} align="center">
+                          No orders found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        {/* Recent Users */}
+        <Grid item xs={12}>
+          <Card>
+            <CardContent>
+              <Typography variant="h6" gutterBottom>
+                Recent Users
+              </Typography>
+              <TableContainer>
+                <Table>
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Name</TableCell>
+                      <TableCell>Email</TableCell>
+                      <TableCell>Phone</TableCell>
+                      <TableCell>Status</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {users && users.length > 0 ? (
+                      users.slice(0, 5).map((user) => (
+                        <TableRow key={user._id}>
+                          <TableCell>{user.name}</TableCell>
+                          <TableCell>{user.email}</TableCell>
+                          <TableCell>{user.phone}</TableCell>
+                          <TableCell>
+                            <Chip
+                              label={user.isBlocked ? 'Blocked' : 'Active'}
+                              color={user.isBlocked ? 'error' : 'success'}
+                              size="small"
+                            />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : (
+                      <TableRow>
+                        <TableCell colSpan={4} align="center">
+                          No users found
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </CardContent>
+          </Card>
+        </Grid>
       </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <Card>
-          <CardContent>
-            <Typography color="textSecondary" gutterBottom>
-              Total Orders
-            </Typography>
-            <Typography variant="h4">
-              {stats.totalOrders}
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <Card>
-          <CardContent>
-            <Typography color="textSecondary" gutterBottom>
-              Orders Today
-            </Typography>
-            <Typography variant="h4">
-              {stats.ordersToday}
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-      <Grid item xs={12} sm={6} md={3}>
-        <Card>
-          <CardContent>
-            <Typography color="textSecondary" gutterBottom>
-              Pending Orders
-            </Typography>
-            <Typography variant="h4">
-              {stats.pendingOrders}
-            </Typography>
-          </CardContent>
-        </Card>
-      </Grid>
-    </Grid>
-  );
+    );
+  };
 
   const renderUsersContent = () => (
     <Paper sx={{ p: 3 }}>
@@ -486,7 +618,7 @@ const AdminDashboard = () => {
               .filter(order => orderStatusFilter === 'all' || order.status === orderStatusFilter)
               .map((order) => (
                 <TableRow key={order._id}>
-                  <TableCell>#{order._id.slice(-6)}</TableCell>
+                  <TableCell>#{order.orderId}</TableCell>
                   <TableCell>{order.userId?.name || 'N/A'}</TableCell>
                   <TableCell>
                     <Select
@@ -512,60 +644,6 @@ const AdminDashboard = () => {
                   </TableCell>
                 </TableRow>
               ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
-  );
-
-  const renderServicesContent = () => (
-    <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h6">Service Management</Typography>
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={() => setShowServiceDialog(true)}
-        >
-          Add Service
-        </Button>
-      </Box>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Service Name</TableCell>
-              <TableCell>Price</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {services.map((service) => (
-              <TableRow key={service._id}>
-                <TableCell>{service.name}</TableCell>
-                <TableCell>${service.price}</TableCell>
-                <TableCell>
-                  <FormControlLabel
-                    control={
-                      <Switch
-                        checked={service.isAvailable}
-                        onChange={() => handleToggleService(service._id)}
-                      />
-                    }
-                    label={service.isAvailable ? 'Available' : 'Unavailable'}
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton size="small" onClick={() => handleEditService(service)}>
-                    <EditIcon />
-                  </IconButton>
-                  <IconButton size="small" onClick={() => handleDeleteService(service._id)}>
-                    <DeleteIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
           </TableBody>
         </Table>
       </TableContainer>
@@ -651,41 +729,6 @@ const AdminDashboard = () => {
     </Paper>
   );
 
-  const renderSettingsContent = () => (
-    <Paper sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ mb: 3 }}>Admin Settings</Typography>
-      <Grid container spacing={3}>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>Profile Settings</Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Avatar sx={{ width: 64, height: 64, mr: 2 }} />
-                <Button variant="outlined">Change Photo</Button>
-              </Box>
-              <Button variant="contained" color="primary" fullWidth sx={{ mt: 2 }}>
-                Update Profile
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-        <Grid item xs={12} md={6}>
-          <Card>
-            <CardContent>
-              <Typography variant="h6" sx={{ mb: 2 }}>System Settings</Typography>
-              <Button variant="contained" color="primary" fullWidth sx={{ mb: 2 }}>
-                Backup Data
-              </Button>
-              <Button variant="contained" color="error" fullWidth>
-                Reset System
-              </Button>
-            </CardContent>
-          </Card>
-        </Grid>
-      </Grid>
-    </Paper>
-  );
-
   const renderMenuItems = () => (
     <Menu
       anchorEl={anchorEl}
@@ -693,7 +736,6 @@ const AdminDashboard = () => {
       onClose={handleMenuClose}
     >
       <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-      <MenuItem onClick={handleMenuClose}>Settings</MenuItem>
       <Divider />
       <MenuItem onClick={clearStorage}>Clear Storage</MenuItem>
       <MenuItem onClick={handleLogout}>Logout</MenuItem>
@@ -713,148 +755,68 @@ const AdminDashboard = () => {
     );
   }
 
-  return (
-    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f5f5f5' }}>
-      {/* Sidebar */}
-      <Paper sx={{ width: 240, p: 2, bgcolor: '#fff' }}>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
-            Admin Panel
-          </Typography>
-        </Box>
-        <List>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('dashboard')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'dashboard' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'dashboard' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'dashboard' ? '#1976d2' : 'inherit' }}>
-              <DashboardIcon />
-            </ListItemIcon>
-            <ListItemText primary="Dashboard" />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('users')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'users' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'users' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'users' ? '#1976d2' : 'inherit' }}>
-              <PeopleIcon />
-            </ListItemIcon>
-            <ListItemText primary="Users" />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('orders')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'orders' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'orders' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'orders' ? '#1976d2' : 'inherit' }}>
-              <LaundryIcon />
-            </ListItemIcon>
-            <ListItemText primary="Orders" />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('services')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'services' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'services' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'services' ? '#1976d2' : 'inherit' }}>
-              <LaundryIcon />
-            </ListItemIcon>
-            <ListItemText primary="Services" />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('payments')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'payments' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'payments' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'payments' ? '#1976d2' : 'inherit' }}>
-              <PaymentIcon />
-            </ListItemIcon>
-            <ListItemText primary="Payments" />
-          </ListItem>
-          <ListItem 
-            button 
-            onClick={() => setActiveTab('settings')}
-            sx={{ 
-              borderRadius: 1, 
-              mb: 1,
-              bgcolor: activeTab === 'settings' ? '#e3f2fd' : 'transparent',
-              color: activeTab === 'settings' ? '#1976d2' : 'inherit'
-            }}
-          >
-            <ListItemIcon sx={{ color: activeTab === 'settings' ? '#1976d2' : 'inherit' }}>
-              <SettingsIcon />
-            </ListItemIcon>
-            <ListItemText primary="Settings" />
-          </ListItem>
-        </List>
-      </Paper>
-
-      {/* Main Content */}
-      <Box sx={{ flexGrow: 1, p: 3 }}>
-        <Container maxWidth="lg">
-          {/* Header */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            mb: 4 
-          }}>
-            <Typography variant="h4">
-              {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-            </Typography>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-              <IconButton onClick={() => setShowNotifications(true)}>
-                <Badge badgeContent={notifications.length} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-              <Button
-                onClick={handleMenuClick}
-                startIcon={<AccountIcon />}
-                endIcon={<ArrowDropDownIcon />}
-              >
-                {user?.name || 'Admin'}
-              </Button>
-              {renderMenuItems()}
-            </Box>
-          </Box>
-
-          {/* Content */}
-          {activeTab === 'dashboard' && renderDashboardContent()}
-          {activeTab === 'users' && renderUsersContent()}
-          {activeTab === 'orders' && renderOrdersContent()}
-          {activeTab === 'services' && renderServicesContent()}
-          {activeTab === 'payments' && renderPaymentsContent()}
-          {activeTab === 'settings' && renderSettingsContent()}
-        </Container>
+  if (error) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        minHeight: '100vh',
+        flexDirection: 'column',
+        gap: 2
+      }}>
+        <Typography color="error" variant="h6">
+          {error}
+        </Typography>
+        <Button 
+          variant="contained" 
+          onClick={() => {
+            setError(null);
+            fetchDashboardData();
+          }}
+        >
+          Retry
+        </Button>
       </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', pt: 8 }}>
+      <Container maxWidth="lg">
+        {/* Header */}
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          mb: 4 
+        }}>
+          <Typography variant="h4">
+            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <IconButton onClick={() => setShowNotifications(true)}>
+              <Badge badgeContent={notifications.length} color="error">
+                <NotificationsIcon />
+              </Badge>
+            </IconButton>
+            <Button
+              onClick={handleMenuClick}
+              startIcon={<AccountIcon />}
+              endIcon={<ArrowDropDownIcon />}
+            >
+              {user?.name || 'Admin'}
+            </Button>
+            {renderMenuItems()}
+          </Box>
+        </Box>
+
+        {/* Content */}
+        {activeTab === 'dashboard' && renderDashboardContent()}
+        {activeTab === 'users' && renderUsersContent()}
+        {activeTab === 'orders' && renderOrdersContent()}
+        {activeTab === 'payments' && renderPaymentsContent()}
+      </Container>
 
       {/* Dialogs */}
       <Dialog open={showServiceDialog} onClose={() => setShowServiceDialog(false)}>

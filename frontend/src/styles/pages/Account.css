@@ -1227,3 +1227,147 @@
     background: #f8f9fa;
     border-radius: 8px;
   }
+
+  .track-order-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #2196f3;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background-color 0.3s;
+  }
+
+  .track-order-btn:hover {
+    background-color: #1976d2;
+  }
+
+  .tracking-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .tracking-modal-content {
+    background-color: white;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+
+  .tracking-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+
+  .tracking-modal-header h3 {
+    margin: 0;
+    color: #333;
+  }
+
+  .tracking-modal-header .close-btn {
+    background: none;
+    border: none;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+  }
+
+  .tracking-modal-body {
+    padding: 16px;
+  }
+
+  .tracking-modal .order-info {
+    margin-bottom: 24px;
+    padding: 16px;
+    background-color: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  .tracking-modal .order-info p {
+    margin: 8px 0;
+  }
+
+  .tracking-timeline {
+    margin-top: 24px;
+  }
+
+  .tracking-timeline h4 {
+    margin-bottom: 16px;
+    color: #333;
+  }
+
+  .timeline {
+    position: relative;
+    padding-left: 24px;
+  }
+
+  .timeline-item {
+    position: relative;
+    padding-bottom: 24px;
+  }
+
+  .timeline-marker {
+    position: absolute;
+    left: -24px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #2196f3;
+    border: 2px solid white;
+    box-shadow: 0 0 0 2px #2196f3;
+  }
+
+  .timeline-content {
+    background-color: #f5f5f5;
+    padding: 12px;
+    border-radius: 4px;
+  }
+
+  .timeline-title {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+  }
+
+  .timeline-date {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+  }
+
+  .timeline-details {
+    color: #555;
+    margin-bottom: 4px;
+  }
+
+  .timeline-performer {
+    font-size: 12px;
+    color: #666;
+    font-style: italic;
+  }
+
+  .order-actions {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px;
+    border-top: 1px solid #eee;
+    margin-top: 12px;
+  }

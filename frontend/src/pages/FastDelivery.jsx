@@ -1,7 +1,7 @@
 import React from "react";
 import { FaShippingFast, FaClock, FaMapMarkerAlt, FaBell, FaMobileAlt } from "react-icons/fa";
 import deliveryImage from "../assets/delivery-service.jpg"; // Add your image path
-import "./FastDelivery.css";
+import '../styles/pages/FastDelivery.css';
 
 const FastDelivery = () => {
   const features = [

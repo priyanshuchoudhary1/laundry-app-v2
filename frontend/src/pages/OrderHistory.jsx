@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import './OrderHistory.css';
+import '../styles/pages/OrderHistory.css';
 
 const OrderHistory = () => {
   const [orders, setOrders] = useState([]);
@@ -51,10 +51,10 @@ const OrderHistory = () => {
 
   if (loading) return <div className="loading">Loading order history...</div>;
   if (error) return <div className="error">{error}</div>;
-
+console.log("ON order his")
   return (
     <div className="order-history-container">
-      <h1>Order History</h1>
+      <h1>Order Historyx</h1>
       
       {orders.length === 0 ? (
         <div className="no-orders">No orders found</div>

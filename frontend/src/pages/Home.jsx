@@ -1,7 +1,7 @@
 import React from "react";
 import { FaTshirt, FaShippingFast, FaCheckCircle, FaCalendarAlt, FaStar, FaLeaf, FaUsers, FaClock } from "react-icons/fa";
 import { Link } from "react-router-dom";
-import "./Home.css";
+import '../styles/pages/Home.css';
 import heroImage from "../assets/engin-akyurt-yCYVV8-kQNM-unsplash.jpg";
 
 

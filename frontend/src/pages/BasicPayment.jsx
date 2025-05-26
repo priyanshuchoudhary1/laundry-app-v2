@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
-import './BasicPayment.css';
+import '../styles/pages/BasicPayment.css';
 
 const BasicPayment = () => {
   const navigate = useNavigate();

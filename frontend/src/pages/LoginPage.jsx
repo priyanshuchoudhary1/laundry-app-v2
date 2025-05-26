@@ -35,6 +35,7 @@ const LoginPage = () => {
           password,
           isAdmin 
         }),
+        credentials: 'include'
       });
 
       const data = await response.json();
@@ -58,12 +59,12 @@ const LoginPage = () => {
       localStorage.setItem('token', data.token);
 
       // Update auth context with user data
-      const loginResult = login({ ...data.user, token: data.token });
+      const loginResult = await login({ ...data.user, token: data.token });
       
       if (loginResult.success) {
         // Navigate based on user role
         if (data.user.role === 'admin') {
-          navigate('/admin-dashboard', { replace: true });
+          navigate('/admin-dashboard/dashboard', { replace: true });
         } else {
           navigate('/account', { replace: true });
         }
@@ -86,12 +87,14 @@ const LoginPage = () => {
         <button 
           className={`login-type-btn ${!isAdmin ? 'active' : ''}`}
           onClick={() => setIsAdmin(false)}
+          type="button"
         >
           <FaUser /> User Login
         </button>
         <button 
           className={`login-type-btn ${isAdmin ? 'active' : ''}`}
           onClick={() => setIsAdmin(true)}
+          type="button"
         >
           <FaUserShield /> Admin Login
         </button>
@@ -128,7 +131,7 @@ const LoginPage = () => {
             required 
           />
         </div>
-        <button type="submit" disabled={loading}>
+        <button type="submit" disabled={loading} className={loading ? 'loading' : ''}>
           {loading ? 'Logging in...' : 'Login'}
         </button>
       </form>

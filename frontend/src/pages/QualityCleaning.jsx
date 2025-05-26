@@ -1,5 +1,5 @@
 import React from 'react';
-import './QualityCleaning.css';
+import '../styles/pages/QualityCleaning.css';
 
 const QualityCleaning = () => {
   return (

@@ -9,23 +9,40 @@ export const AuthProvider = ({ children }) => {
   const [error, setError] = useState(null);
   const { clearCart } = useCart();
 
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('token');
       const userData = localStorage.getItem('userData');
       
-      if (token && userData) {
-        const parsedUserData = JSON.parse(userData);
-        setUser(parsedUserData);
-      } else {
+      if (!token || !userData) {
         setUser(null);
         localStorage.removeItem('token');
         localStorage.removeItem('userData');
+        setLoading(false);
+        return;
       }
+
+      // Verify token with backend
+      const response = await fetch('http://localhost:4000/api/users/verify', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Invalid token');
+      }
+
+      const data = await response.json();
+      if (!data.success) {
+        throw new Error('Token verification failed');
+      }
+
+      const parsedUserData = JSON.parse(userData);
+      setUser(parsedUserData);
     } catch (err) {
       console.error('Auth check error:', err);
       setError(err.message);
@@ -36,6 +53,10 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
 
   const register = async (userData) => {
     try {
@@ -64,9 +85,9 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = (userData) => {
+  const login = async (userData) => {
     try {
-      if (!userData) {
+      if (!userData || !userData.token) {
         throw new Error('Invalid login data');
       }
 
@@ -74,7 +95,7 @@ export const AuthProvider = ({ children }) => {
       localStorage.setItem('userData', JSON.stringify(userData));
       localStorage.setItem('token', userData.token);
       
-      // Update state immediately
+      // Update state
       setUser(userData);
       setError(null);
       
@@ -82,6 +103,9 @@ export const AuthProvider = ({ children }) => {
     } catch (err) {
       console.error('Login error:', err);
       setError(err.message);
+      setUser(null);
+      localStorage.removeItem('token');
+      localStorage.removeItem('userData');
       return { success: false, error: err.message };
     }
   };
@@ -99,10 +123,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const updateUser = (updatedData) => {
+  const updateUser = async (updatedData) => {
     try {
       if (!user) {
         throw new Error('No user logged in');
+      }
+
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      // Update user data on the server
+      const response = await fetch('http://localhost:4000/api/users/update', {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(updatedData),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update user data');
       }
 
       const newUserData = { ...user, ...updatedData };
@@ -123,8 +167,8 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
-    logout,
     register,
+    logout,
     updateUser,
     checkAuth
   };

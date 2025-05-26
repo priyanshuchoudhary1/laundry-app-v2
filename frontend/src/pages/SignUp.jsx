@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { FaUser, FaLock, FaUserShield } from 'react-icons/fa';
-import './Login.css';
+import '../styles/pages/Login.css';
 
 function SignUp() {
   const [formData, setFormData] = useState({

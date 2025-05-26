@@ -1,7 +1,7 @@
 import React from 'react';
 import { FaLeaf, FaShippingFast, FaAward, FaUsers } from 'react-icons/fa';
 import { MdEco, MdSupportAgent } from 'react-icons/md';
-import './AboutUs.css';
+import '../styles/pages/AboutUs.css';
 
 const AboutUs = () => {
   // Using placeholder image URLs

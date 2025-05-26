@@ -9,7 +9,7 @@ import {
   useStripe,
   useElements,
 } from '@stripe/react-stripe-js';
-import './Payment.css';
+import '../styles/pages/Payment.css';
 
 // Replace with your Stripe publishable key
 const stripePromise = loadStripe('your_publishable_key');

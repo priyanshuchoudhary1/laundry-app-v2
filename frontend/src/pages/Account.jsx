@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { FaUser, FaHistory, FaCog, FaSignOutAlt, FaEdit, FaCheck, FaTimes, FaTrash, FaCreditCard, FaPlus, FaPaypal, FaCamera } from 'react-icons/fa';
+import { FaUser, FaHistory, FaCog, FaSignOutAlt, FaEdit, FaCheck, FaTimes, FaTrash, FaCreditCard, FaPlus, FaPaypal, FaCamera, FaDatabase, FaRedo, FaSearch } from 'react-icons/fa';
 import { MdPayment, MdLocalLaundryService, MdWaterDrop, MdOutlineDry, MdIron } from 'react-icons/md';
 import { SiGooglepay, SiPaytm, SiPhonepe } from 'react-icons/si';
 import { RiTShirtLine } from 'react-icons/ri';
@@ -7,7 +7,7 @@ import { BsClockHistory } from 'react-icons/bs';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { updateUserProfile, addPaymentMethod, deletePaymentMethod, setDefaultPaymentMethod, getLaundryPreferences, updateLaundryPreferences } from '../services/api';
-import './Account.css';
+import '../styles/pages/Account.css';
 
 const Account = () => {
   const { user, loading: authLoading, logout, updateUser } = useAuth();
@@ -54,6 +54,8 @@ const Account = () => {
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef(null);
   const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showTrackingModal, setShowTrackingModal] = useState(false);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -137,6 +139,7 @@ const Account = () => {
       
       if (data.success && Array.isArray(data.data)) {
         // Sort orders by date, most recent first
+        console.log(data.data)
         const sortedOrders = data.data.sort((a, b) => 
           new Date(b.createdAt) - new Date(a.createdAt)
         );
@@ -512,6 +515,10 @@ const Account = () => {
     }
   };
 
+  const handleTrackOrder = (order) => {
+    navigate('/track-order', { state: { orderId: order.orderId } });
+  };
+
   if (authLoading) {
     return <div className="loading-container">Loading...</div>;
   }
@@ -706,7 +713,7 @@ const Account = () => {
                 {orders.map((order) => (
                   <div key={order._id || order.orderId} className="order-card">
                     <div className="order-header">
-                      <div className="order-id">Order #{order._id || order.orderId}</div>
+                      <div className="order-id">Order #{order.orderId}</div>
                       <div className={`order-status ${getStatusColor(order.status)}`}>
                         {order.status}
                       </div>
@@ -729,26 +736,14 @@ const Account = () => {
                         </div>
                       )}
                     </div>
-                    {order.history && order.history.length > 0 && (
-                      <div className="order-timeline">
-                        <h4>Order Timeline</h4>
-                        <div className="timeline">
-                          {order.history.map((event, index) => (
-                            <div key={index} className="timeline-item">
-                              <div className="timeline-marker"></div>
-                              <div className="timeline-content">
-                                <div className="timeline-title">{event.action}</div>
-                                <div className="timeline-date">{formatDate(event.timestamp)}</div>
-                                <div className="timeline-details">{event.details}</div>
-                                {event.performedBy && (
-                                  <div className="timeline-performer">By: {event.performedBy}</div>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    <div className="order-actions">
+                      <button 
+                        className="track-order-btn"
+                        onClick={() => handleTrackOrder(order)}
+                      >
+                        <FaSearch /> Track Order
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -1252,6 +1247,72 @@ const Account = () => {
             )}
           </div>
         );
+      case 'settings':
+        if (user?.role !== 'admin') {
+          return <div>Access denied</div>;
+        }
+        return (
+          <div className="settings-section">
+            <h2><FaCog /> Admin Settings</h2>
+            {error && <p className="error-message">{error}</p>}
+            {success && <p className="success-message">{success}</p>}
+            
+            <div className="settings-grid">
+              <div className="settings-card">
+                <div className="settings-icon">
+                  <FaUser />
+                </div>
+                <div className="settings-info">
+                  <h3>Profile Settings</h3>
+                  <p>Update your admin profile information</p>
+                  <button className="settings-btn" onClick={() => setActiveTab('profile')}>
+                    Manage Profile
+                  </button>
+                </div>
+              </div>
+              
+              <div className="settings-card">
+                <div className="settings-icon">
+                  <FaDatabase />
+                </div>
+                <div className="settings-info">
+                  <h3>System Backup</h3>
+                  <p>Create a backup of the system data</p>
+                  <button 
+                    className="settings-btn"
+                    onClick={() => {
+                      // Add backup functionality
+                      setSuccess('Backup initiated successfully');
+                    }}
+                  >
+                    Backup Data
+                  </button>
+                </div>
+              </div>
+              
+              <div className="settings-card">
+                <div className="settings-icon">
+                  <FaRedo />
+                </div>
+                <div className="settings-info">
+                  <h3>System Reset</h3>
+                  <p>Reset system to default settings</p>
+                  <button 
+                    className="settings-btn danger"
+                    onClick={() => {
+                      if (window.confirm('Are you sure you want to reset the system? This action cannot be undone.')) {
+                        // Add reset functionality
+                        setSuccess('System reset completed');
+                      }
+                    }}
+                  >
+                    Reset System
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
       default:
         return <div>Select a tab</div>;
     }
@@ -1295,6 +1356,14 @@ const Account = () => {
           >
             <MdPayment /> Payment Methods
           </button>
+          {user?.role === 'admin' && (
+            <button 
+              className={activeTab === 'settings' ? 'active' : ''}
+              onClick={() => setActiveTab('settings')}
+            >
+              <FaCog /> Settings
+            </button>
+          )}
           <button className="logout-btn" onClick={handleLogout}>
             <FaSignOutAlt /> Log Out
           </button>

@@ -107,7 +107,7 @@ const PORT = process.env.PORT || 4000;
 const startServer = (port) => {
   const server = app.listen(port, () => {
     console.log(`Server is running on port ${port}`);
-    console.log(`Frontend URLs allowed: http://localhost:3000, http://localhost:5173`);
+    console.log(`Frontend URLs allowed: http://localhost:4000, http://localhost:5173`);
   }).on('error', (err) => {
     if (err.code === 'EADDRINUSE') {
       console.log(`Port ${port} is in use, trying ${port + 1}...`);

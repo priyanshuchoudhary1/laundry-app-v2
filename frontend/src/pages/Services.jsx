@@ -3,7 +3,7 @@ import { FaShoppingCart } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from "../context/CartContext";
-import './Services.css';
+import '../styles/pages/Services.css';
 
 const Services = () => {
   const { user } = useAuth();
