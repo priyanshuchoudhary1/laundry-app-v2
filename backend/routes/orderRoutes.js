@@ -14,7 +14,8 @@ router.post('/', async (req, res) => {
       deliveryAddress,
       paymentMethod,
       pickupDate,
-      deliveryDate
+      deliveryDate,
+      priorityLevel
     } = req.body;
 
     // Validate required fields
@@ -111,7 +112,8 @@ router.post('/', async (req, res) => {
       statusTimeline,
       orderHistory,
       pickupDate: pickupDate ? new Date(pickupDate) : undefined,
-      deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined
+      deliveryDate: deliveryDate ? new Date(deliveryDate) : undefined,
+      priorityLevel
     });
 
     console.log('Attempting to save order:', order);

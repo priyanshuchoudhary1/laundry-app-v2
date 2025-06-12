@@ -88,6 +88,35 @@ const orderSchema = new mongoose.Schema({
       default: 'System'
     }
   }],
+  assignedStaff: {
+    washer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Staff'
+    },
+    delivery: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Staff'
+    }
+  },
+  priorityLevel: {
+    type: String,
+    enum: ['high', 'medium', 'low'],
+    default: 'low'
+  },
+  assignmentHistory: [{
+    staff: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Staff'
+    },
+    role: {
+      type: String,
+      enum: ['washer', 'delivery']
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
   createdAt: {
     type: Date,
     default: Date.now

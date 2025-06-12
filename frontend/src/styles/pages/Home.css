@@ -39,6 +39,11 @@
   max-width: 700px;
   z-index: 2;
 }
+.hero-content h1 {
+  font-size: 3.5rem;
+  margin-bottom: 1rem;
+  COLOR: royalblue;
+}
 
 .hero-title {
   font-size: 4.5rem;
@@ -160,7 +165,7 @@
   backdrop-filter: blur(5px);
   display: inline-block;
   padding: 0.8rem 2rem;
-  border-radius: 50px; */
+  border-radius: 50px;
   
   /* Decorative border */
   border: 1px solid rgba(255, 215, 0, 0.3);
@@ -463,7 +468,8 @@
 
 .cta-content h2 {
   font-size: 2.8rem;
-  margin-bottom: 1rem;
+  margin-bottom: 2rem;
+  color: #fee2e2;
 }
 
 .cta-content p {
@@ -472,7 +478,197 @@
   opacity: 0.9;
 }
 
-/* Responsive Design */
+/* Location Section Styles */
+.location-section {
+  padding: 4rem 2rem;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+}
+
+.location-content {
+  max-width: 1200px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.location-content .section-title {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.location-content .section-subtitle {
+  font-size: 1.1rem;
+  margin-bottom: 2rem;
+  opacity: 0.9;
+}
+
+.location-check-container {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 15px;
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.pincode-form {
+  margin-bottom: 2rem;
+}
+
+.input-group {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 50px;
+  padding: 0.5rem 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.input-icon {
+  color: var(--primary-color);
+  font-size: 1.2rem;
+  margin-right: 1rem;
+}
+
+.input-group input {
+  flex: 1;
+  border: none;
+  padding: 0.5rem;
+  font-size: 1.1rem;
+  outline: none;
+  background: transparent;
+}
+
+.check-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.check-button:hover {
+  background: var(--secondary-color);
+  transform: scale(1.05);
+}
+
+.check-button:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+}
+
+.popular-cities {
+  margin-top: 2rem;
+}
+
+.popular-cities h3 {
+  font-size: 1.2rem;
+  margin-bottom: 1rem;
+  color: white;
+}
+
+.cities-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.city-button {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 25px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+}
+
+.city-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+.city-button.active {
+  background: white;
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.availability-status {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.availability-status.available {
+  background: rgba(46, 213, 115, 0.2);
+}
+
+.availability-status.unavailable {
+  background: rgba(255, 71, 87, 0.2);
+}
+
+.status-icon {
+  font-size: 2rem;
+}
+
+.availability-status.available .status-icon {
+  color: #2ed573;
+}
+
+.availability-status.unavailable .status-icon {
+  color: #ff4757;
+}
+
+.availability-status p {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.cta-button.secondary {
+  background: white;
+  color: var(--primary-color);
+  padding: 0.8rem 2rem;
+  border-radius: 25px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.cta-button.secondary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.error-message {
+  color: #ff4757;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  text-align: center;
+  background: rgba(255, 71, 87, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 71, 87, 0.2);
+}
+
+/* Responsive Styles */
 @media (max-width: 768px) {
   .hero-banner {
     height: 80vh;
@@ -515,5 +711,37 @@
   
   .cta-content h2 {
     font-size: 2.2rem;
+  }
+
+  .location-section {
+    padding: 3rem 1rem;
+  }
+
+  .location-content .section-title {
+    font-size: 2rem;
+  }
+
+  .location-check-container {
+    padding: 1.5rem;
+  }
+
+  .cities-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .input-group {
+    flex-direction: column;
+    border-radius: 15px;
+    padding: 1rem;
+  }
+
+  .input-icon {
+    margin-bottom: 0.5rem;
+  }
+
+  .check-button {
+    margin-top: 1rem;
+    width: 100%;
+    border-radius: 10px;
   }
 }

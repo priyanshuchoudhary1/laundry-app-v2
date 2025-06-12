@@ -348,3 +348,122 @@
   visibility: visible;
   transform: translateY(0);
 }
+
+/* Location Check Styles */
+.location-trigger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--dark);
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.95rem;
+  transition: var(--transition);
+}
+
+.location-trigger:hover {
+  color: var(--primary);
+}
+
+.location-trigger .link-icon {
+  font-size: 1.1rem;
+}
+
+.popular-cities {
+  margin-top: 1.5rem;
+}
+
+.popular-cities h3 {
+  font-size: 0.95rem;
+  color: var(--dark);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.cities-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.5rem;
+}
+
+.city-button {
+  background: var(--gray-100);
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.city-button:hover {
+  background: var(--gray-200);
+}
+
+.city-button.active {
+  background: var(--primary);
+  color: white;
+}
+
+.availability-status {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.availability-status.available {
+  background: rgba(46, 213, 115, 0.1);
+  color: #2ed573;
+}
+
+.availability-status.unavailable {
+  background: rgba(255, 71, 87, 0.1);
+  color: #ff4757;
+}
+
+.status-icon {
+  font-size: 1.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.availability-status p {
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.cta-button.secondary {
+  display: inline-block;
+  background: var(--primary);
+  color: white;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  transition: var(--transition);
+}
+
+.cta-button.secondary:hover {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1024px) {
+  .location-dropdown {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 90%;
+    max-width: 320px;
+    margin: 0;
+  }
+
+  .location-dropdown::before {
+    display: none;
+  }
+}

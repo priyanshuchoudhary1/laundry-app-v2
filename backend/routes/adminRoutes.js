@@ -5,6 +5,7 @@ const Service = require('../models/Service');
 const Payment = require('../models/Payment');
 const User = require('../models/User');
 const Order = require('../models/Order');
+const Staff = require('../models/Staff');
 
 // Get dashboard stats
 router.get('/stats', verifyAuth, isAdmin, async (req, res) => {
@@ -17,6 +18,8 @@ router.get('/stats', verifyAuth, isAdmin, async (req, res) => {
       }
     });
     const pendingOrders = await Order.countDocuments({ status: 'pending' });
+    const totalStaff = await Staff.countDocuments();
+    const availableStaff = await Staff.countDocuments({ isAvailable: true });
 
     res.json({
       success: true,
@@ -24,7 +27,9 @@ router.get('/stats', verifyAuth, isAdmin, async (req, res) => {
         totalUsers,
         totalOrders,
         ordersToday,
-        pendingOrders
+        pendingOrders,
+        totalStaff,
+        availableStaff
       }
     });
   } catch (error) {
@@ -166,6 +171,102 @@ router.put('/orders/:id/status', verifyAuth, isAdmin, async (req, res) => {
     res.json({ success: true, order });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
+  }
+});
+
+// Get all staff members
+router.get('/staff', verifyAuth, isAdmin, async (req, res) => {
+  try {
+    console.log('Fetching staff data...');
+    const staff = await Staff.find().sort({ createdAt: -1 });
+    console.log('Staff data fetched:', staff);
+    res.json({ 
+      success: true, 
+      staff,
+      message: 'Staff data retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error fetching staff data:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message,
+      error: error.stack 
+    });
+  }
+});
+
+// Get detailed user order statistics
+router.get('/user-stats/:userId', verifyAuth, isAdmin, async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    // Get all orders for the user
+    const orders = await Order.find({ user: userId })
+      .populate('items.service')
+      .populate('payment');
+
+    // Calculate statistics
+    const stats = {
+      totalOrders: orders.length,
+      totalSpent: orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0),
+      cancelledOrders: orders.filter(order => order.status === 'cancelled').length,
+      paymentMethods: {},
+      categoryStats: {},
+      recentOrders: orders.slice(-5).map(order => ({
+        id: order._id,
+        date: order.createdAt,
+        total: order.totalAmount,
+        status: order.status,
+        items: order.items.map(item => ({
+          service: item.service.name,
+          quantity: item.quantity,
+          price: item.price
+        }))
+      }))
+    };
+
+    // Calculate payment method distribution
+    orders.forEach(order => {
+      if (order.payment && order.payment.paymentMethod) {
+        const method = order.payment.paymentMethod;
+        stats.paymentMethods[method] = (stats.paymentMethods[method] || 0) + 1;
+      }
+    });
+
+    // Calculate category distribution
+    orders.forEach(order => {
+      order.items.forEach(item => {
+        if (item.service && item.service.category) {
+          const category = item.service.category;
+          if (!stats.categoryStats[category]) {
+            stats.categoryStats[category] = {
+              count: 0,
+              totalAmount: 0,
+              items: []
+            };
+          }
+          stats.categoryStats[category].count += item.quantity;
+          stats.categoryStats[category].totalAmount += (item.price * item.quantity);
+          stats.categoryStats[category].items.push({
+            service: item.service.name,
+            quantity: item.quantity,
+            price: item.price
+          });
+        }
+      });
+    });
+
+    res.json({
+      success: true,
+      stats
+    });
+  } catch (error) {
+    console.error('Error fetching user stats:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching user statistics',
+      error: error.message
+    });
   }
 });
 

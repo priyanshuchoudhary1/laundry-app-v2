@@ -61,6 +61,7 @@ const adminRoutes = [
   { path: "/admin-dashboard/dashboard", element: <AdminDashboard /> },
   { path: "/admin-dashboard/users", element: <AdminDashboard /> },
   { path: "/admin-dashboard/orders", element: <AdminDashboard /> },
+  { path: "/admin-dashboard/staff", element: <AdminDashboard /> },
   { path: "/admin-dashboard/services", element: <AdminDashboard /> },
   { path: "/admin-dashboard/payments", element: <AdminDashboard /> },
   { path: "/admin-dashboard/settings", element: <AdminDashboard /> },

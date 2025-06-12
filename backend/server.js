@@ -24,6 +24,7 @@ const userRoutes = require('./routes/userRoutes');
 const orderRoutes = require('./routes/orderRoutes');
 const paymentRoutes = require('./routes/payment');
 const adminRoutes = require('./routes/adminRoutes');
+const staffRoutes = require('./routes/staff');
 
 const app = express();
 
@@ -31,7 +32,7 @@ const app = express();
 app.use(cors({
   origin: ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4001'],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
@@ -77,6 +78,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/staff', staffRoutes);
 
 // Basic route
 app.get('/', (req, res) => {

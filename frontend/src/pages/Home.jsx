@@ -1,12 +1,127 @@
-import React from "react";
-import { FaTshirt, FaShippingFast, FaCheckCircle, FaCalendarAlt, FaStar, FaLeaf, FaUsers, FaClock } from "react-icons/fa";
+import React, { useState } from "react";
+import { FaTshirt, FaShippingFast, FaCheckCircle, FaCalendarAlt, FaStar, FaLeaf, FaUsers, FaClock, FaMapMarkerAlt, FaSearch } from "react-icons/fa";
 import { Link } from "react-router-dom";
 import '../styles/pages/Home.css';
 import heroImage from "../assets/engin-akyurt-yCYVV8-kQNM-unsplash.jpg";
-
+import ManishPic from "../assets/ManishPic.JPG";
+import AshuPic from "../assets/AshuPic.JPG";
 
 const Home = () => {
-  
+  const [pincode, setPincode] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+  const [availabilityStatus, setAvailabilityStatus] = useState(null);
+  const [isChecking, setIsChecking] = useState(false);
+  const [error, setError] = useState('');
+  const [locationDetails, setLocationDetails] = useState(null);
+
+  const popularCities = [
+    { name: 'Delhi', pincode: '110001' },
+    { name: 'Mumbai', pincode: '400001' },
+    { name: 'Bangalore', pincode: '560001' },
+    { name: 'Hyderabad', pincode: '500001' },
+    { name: 'Chennai', pincode: '600001' },
+    { name: 'Kolkata', pincode: '700001' },
+    { name: 'Patna', pincode: '800001' }
+  ];
+
+  // List of pincodes where service is available
+  const serviceAvailablePincodes = [
+    // Delhi
+    '110001', '110002', '110003', '110004', '110005', '110006', '110007', '110008', '110009', '110010',
+    // Mumbai
+    '400001', '400002', '400003', '400004', '400005', '400006', '400007', '400008', '400009', '400010',
+    // Bangalore
+    '560001', '560002', '560003', '560004', '560005', '560006', '560007', '560008', '560009', '560010',
+    // Hyderabad
+    '500001', '500002', '500003', '500004', '500005', '500006', '500007', '500008', '500009', '500010',
+    // Chennai
+    '600001', '600002', '600003', '600004', '600005', '600006', '600007', '600008', '600009', '600010',
+    // Kolkata
+    '700001', '700002', '700003', '700004', '700005', '700006', '700007', '700008', '700009', '700010',
+    // Patna
+    '800001', '800002', '800003', '800004', '800005', '800006', '800007', '800008', '800009', '800010'
+  ];
+
+  const validatePincode = async (code) => {
+    try {
+      const response = await fetch(`https://api.postalpincode.in/pincode/${code}`);
+      const data = await response.json();
+      
+      if (data[0].Status === "Success") {
+        const locationData = data[0].PostOffice[0];
+        return {
+          isValid: true,
+          location: {
+            district: locationData.District,
+            state: locationData.State,
+            city: locationData.Name
+          }
+        };
+      }
+      return { isValid: false };
+    } catch (error) {
+      console.error('Error validating pincode:', error);
+      return { isValid: false };
+    }
+  };
+
+  const checkAvailability = async (code) => {
+    setIsChecking(true);
+    setError('');
+    setLocationDetails(null);
+    setAvailabilityStatus(null);
+    
+    try {
+      const validationResult = await validatePincode(code);
+      
+      if (!validationResult.isValid) {
+        setError('Invalid pincode. Please enter a valid Indian pincode.');
+      } else {
+        setLocationDetails(validationResult.location);
+        
+        if (!serviceAvailablePincodes.includes(code)) {
+          setAvailabilityStatus({
+            available: false,
+            message: `Service not available in ${validationResult.location.city}, ${validationResult.location.district} yet.`
+          });
+        } else {
+          setAvailabilityStatus({
+            available: true,
+            message: `Service available in ${validationResult.location.city}, ${validationResult.location.district}!`
+          });
+        }
+      }
+    } catch (error) {
+      setError('Error checking pincode. Please try again.');
+    } finally {
+      setIsChecking(false);
+    }
+  };
+
+  const handlePincodeSubmit = async (e) => {
+    e.preventDefault();
+    if (pincode.length === 6) {
+      setSelectedCity(''); // Clear selected city when manually entering pincode
+      await checkAvailability(pincode);
+    }
+  };
+
+  const handleCitySelect = async (city) => {
+    setSelectedCity(city.name);
+    setPincode(city.pincode);
+    setError('');
+    await checkAvailability(city.pincode);
+  };
+
+  const handlePincodeChange = (e) => {
+    const value = e.target.value.replace(/\D/g, '').slice(0, 6);
+    setPincode(value);
+    setError('');
+    setAvailabilityStatus(null);
+    setLocationDetails(null);
+    setSelectedCity(''); // Clear selected city when input changes
+  };
+
   const processImage = "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80";
   const testimonialImage = "https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80";
 
@@ -26,6 +141,62 @@ const Home = () => {
             <Link to="/services" className="cta-button primary">
               Book Now <span className="arrow">→</span>
             </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Location Check Section */}
+      <section id="location-section" className="location-section">
+        <div className="location-content">
+          <h2 className="section-title">Check Service Availability</h2>
+          <p className="section-subtitle">Enter your pincode or select your city to check if we serve your area</p>
+          
+          <div className="location-check-container">
+            <form onSubmit={handlePincodeSubmit} className="pincode-form">
+              <div className="input-group">
+                <FaMapMarkerAlt className="input-icon" />
+                <input
+                  type="text"
+                  placeholder="Enter your 6-digit pincode"
+                  value={pincode}
+                  onChange={handlePincodeChange}
+                  maxLength="6"
+                  pattern="\d{6}"
+                  required
+                />
+                <button type="submit" className="check-button" disabled={isChecking || pincode.length !== 6}>
+                  {isChecking ? 'Checking...' : <FaSearch />}
+                </button>
+              </div>
+              {error && <p className="error-message">{error}</p>}
+            </form>
+
+            <div className="popular-cities">
+              <h3>Popular Cities</h3>
+              <div className="cities-grid">
+                {popularCities.map((city) => (
+                  <button
+                    key={city.pincode}
+                    className={`city-button ${selectedCity === city.name ? 'active' : ''}`}
+                    onClick={() => handleCitySelect(city)}
+                  >
+                    {city.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {availabilityStatus && (
+              <div className={`availability-status ${availabilityStatus.available ? 'available' : 'unavailable'}`}>
+                <FaCheckCircle className="status-icon" />
+                <p>{availabilityStatus.message}</p>
+                {availabilityStatus.available && (
+                  <Link to="/services" className="cta-button secondary">
+                    Book Now
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -132,19 +303,19 @@ const Home = () => {
         <h2 className="section-title">What Our Customers Say</h2>
         <div className="testimonials-grid">
           <div className="testimonial-card">
-            <div className="testimonial-image" style={{ backgroundImage: `url(https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80)` }}></div>
+            <div className="testimonial-image" style={{ backgroundImage: `url(${ManishPic})` }}></div>
             <div className="testimonial-content">
               <p>"The best laundry service I've ever used. Fast, reliable, and my clothes always come back looking brand new!"</p>
-              <h4>Priyanshu Choudhary</h4>
-              <div className="rating">★★★★★</div>
+              <h4>Manish Kumar </h4>
+              <div className="rating">★★★★</div>
             </div>
           </div>
           <div className="testimonial-card">
-            <div className="testimonial-image" style={{ backgroundImage: `url(https://images.unsplash.com/photo-1573497019940-1c28c88b4f3e?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80)` }}></div>
+            <div className="testimonial-image" style={{ backgroundImage: `url(${AshuPic})` }}></div>
             <div className="testimonial-content">
               <p>"Their attention to detail is impressive. They handle my delicate fabrics with such care. Highly recommended!"</p>
-              <h4>Yash </h4>
-              <div className="rating">★★★★★</div>
+              <h4>Ashutosh Singh </h4>
+              <div className="rating">★★★★</div>
             </div>
           </div>
         </div>

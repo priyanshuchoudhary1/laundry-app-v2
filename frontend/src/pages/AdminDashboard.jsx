@@ -42,7 +42,10 @@ import {
   Select,
   Switch,
   FormControlLabel,
-  Chip
+  Chip,
+  Alert,
+  Drawer,
+  Toolbar
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -61,8 +64,10 @@ import {
   Cancel as CancelIcon,
   Payment as PaymentIcon,
   Add as AddIcon,
-  Save as SaveIcon
+  Save as SaveIcon,
+  Group as GroupIcon
 } from '@mui/icons-material';
+import { Link } from 'react-router-dom';
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -98,6 +103,9 @@ const AdminDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [services, setServices] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [staff, setStaff] = useState([]);
+  const [showStaffDialog, setShowStaffDialog] = useState(false);
+  const [selectedStaff, setSelectedStaff] = useState(null);
 
   // Filter states
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
@@ -134,6 +142,13 @@ const AdminDashboard = () => {
   // Get current path and set initial tab
   useEffect(() => {
     const path = location.pathname;
+    console.log('Current path:', path);
+    
+    if (path.includes('/admin-dashboard/user/')) {
+      // Don't change the active tab when viewing user orders
+      return;
+    }
+    
     const pathParts = path.split('/');
     const currentPath = pathParts[pathParts.length - 1];
     
@@ -141,7 +156,7 @@ const AdminDashboard = () => {
       setActiveTab('dashboard');
       navigate('/admin-dashboard/dashboard', { replace: true });
     } else if (currentPath && currentPath !== activeTab && 
-               ['dashboard', 'users', 'orders', 'payments'].includes(currentPath)) {
+               ['dashboard', 'users', 'orders', 'staff', 'payments'].includes(currentPath)) {
       setActiveTab(currentPath);
     }
   }, [location.pathname, navigate, activeTab]);
@@ -196,84 +211,97 @@ const AdminDashboard = () => {
       console.log('Making API calls with headers:', headers);
 
       // Fetch all data in parallel
-      const [statsResponse, usersResponse, ordersResponse, servicesResponse, paymentsResponse] = await Promise.all([
+      const [statsResponse, usersResponse, ordersResponse, servicesResponse, paymentsResponse, staffResponse] = await Promise.all([
         fetch('http://localhost:4000/api/admin/stats', {
-          method: 'GET',
-          headers,
-          credentials: 'include'
+          headers
         }),
         fetch('http://localhost:4000/api/admin/users', {
-          method: 'GET',
-          headers,
-          credentials: 'include'
+          headers
         }),
         fetch('http://localhost:4000/api/admin/orders', {
-          method: 'GET',
-          headers,
-          credentials: 'include'
+          headers
         }),
         fetch('http://localhost:4000/api/admin/services', {
-          method: 'GET',
-          headers,
-          credentials: 'include'
+          headers
         }),
         fetch('http://localhost:4000/api/admin/payments', {
-          method: 'GET',
-          headers,
-          credentials: 'include'
+          headers
+        }),
+        fetch('http://localhost:4000/api/admin/staff', {
+          headers
         })
       ]);
 
-      console.log('API Responses:', {
+      // Log response statuses
+      console.log('API Response Statuses:', {
         stats: statsResponse.status,
         users: usersResponse.status,
         orders: ordersResponse.status,
         services: servicesResponse.status,
-        payments: paymentsResponse.status
+        payments: paymentsResponse.status,
+        staff: staffResponse.status
       });
 
-      // Check if any response is not ok
-      if (!statsResponse.ok || !usersResponse.ok || !ordersResponse.ok || !servicesResponse.ok || !paymentsResponse.ok) {
-        const errorResponse = !statsResponse.ok ? statsResponse :
-                            !usersResponse.ok ? usersResponse :
-                            !ordersResponse.ok ? ordersResponse :
-                            !servicesResponse.ok ? servicesResponse :
-                            paymentsResponse;
-        
-        const errorData = await errorResponse.json();
-        console.error('API Error:', errorData);
-        throw new Error(errorData.message || 'Failed to fetch data');
+      // Check each response individually
+      if (!statsResponse.ok) {
+        const errorData = await statsResponse.json();
+        throw new Error(`Stats API error: ${errorData.message}`);
+      }
+      if (!usersResponse.ok) {
+        const errorData = await usersResponse.json();
+        throw new Error(`Users API error: ${errorData.message}`);
+      }
+      if (!ordersResponse.ok) {
+        const errorData = await ordersResponse.json();
+        throw new Error(`Orders API error: ${errorData.message}`);
+      }
+      if (!servicesResponse.ok) {
+        const errorData = await servicesResponse.json();
+        throw new Error(`Services API error: ${errorData.message}`);
+      }
+      if (!paymentsResponse.ok) {
+        const errorData = await paymentsResponse.json();
+        throw new Error(`Payments API error: ${errorData.message}`);
+      }
+      if (!staffResponse.ok) {
+        const errorData = await staffResponse.json();
+        throw new Error(`Staff API error: ${errorData.message}`);
       }
 
       // Parse all responses
-      const [statsData, usersData, ordersData, servicesData, paymentsData] = await Promise.all([
+      const [statsData, usersData, ordersData, servicesData, paymentsData, staffData] = await Promise.all([
         statsResponse.json(),
         usersResponse.json(),
         ordersResponse.json(),
         servicesResponse.json(),
-        paymentsResponse.json()
+        paymentsResponse.json(),
+        staffResponse.json()
       ]);
 
+      // Log parsed data
       console.log('Parsed API Data:', {
         stats: statsData,
         users: usersData,
         orders: ordersData,
         services: servicesData,
-        payments: paymentsData
+        payments: paymentsData,
+        staff: staffData
       });
 
       // Update state with fetched data
-      setStats(statsData.stats || { totalUsers: 0, totalOrders: 0, ordersToday: 0, pendingOrders: 0 });
+      setStats(statsData.stats);
       setUsers(usersData.users || []);
       setOrders(ordersData.orders || []);
       setServices(servicesData.services || []);
       setPayments(paymentsData.payments || []);
+      setStaff(staffData.staff || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
       setError(error.message);
       setLoading(false);
       
+      // Handle authentication errors
       if (error.message.includes('Authentication') || error.message.includes('token')) {
         localStorage.removeItem('token');
         navigate('/login');
@@ -351,6 +379,78 @@ const AdminDashboard = () => {
     } catch (error) {
       console.error('Error adding service:', error);
     }
+  };
+
+  // Staff Management Functions
+  const handleDeleteStaff = async (staffId) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:4000/api/staff/${staffId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) throw new Error('Failed to delete staff member');
+      
+      setStaff(staff.filter(s => s._id !== staffId));
+    } catch (error) {
+      console.error('Error deleting staff:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleAddStaff = async (staffData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:4000/api/staff', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(staffData)
+      });
+
+      if (!response.ok) throw new Error('Failed to add staff member');
+      
+      const newStaff = await response.json();
+      setStaff([...staff, newStaff]);
+      setShowStaffDialog(false);
+    } catch (error) {
+      console.error('Error adding staff:', error);
+      setError(error.message);
+    }
+  };
+
+  const handleUpdateStaff = async (staffId, staffData) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:4000/api/staff/${staffId}`, {
+        method: 'PATCH',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(staffData)
+      });
+
+      if (!response.ok) throw new Error('Failed to update staff member');
+      
+      const updatedStaff = await response.json();
+      setStaff(staff.map(s => s._id === staffId ? updatedStaff : s));
+      setShowStaffDialog(false);
+    } catch (error) {
+      console.error('Error updating staff:', error);
+      setError(error.message);
+    }
+  };
+
+  // Update the handleViewUserOrders function
+  const handleViewUserOrders = (userId) => {
+    console.log('Navigating to user orders:', userId);
+    navigate(`/admin-dashboard/user/${userId}`, { replace: false });
   };
 
   // Render Functions
@@ -521,66 +621,70 @@ const AdminDashboard = () => {
     );
   };
 
-  const renderUsersContent = () => (
-    <Paper sx={{ p: 3 }}>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h6">User Management</Typography>
-        <TextField
-          placeholder="Search users..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchIcon />
-              </InputAdornment>
-            ),
-          }}
-        />
+  const renderUsersContent = () => {
+    return (
+      <Box>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+          <Typography variant="h6">User Management</Typography>
+          <TextField
+            placeholder="Search users..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchIcon />
+                </InputAdornment>
+              ),
+            }}
+          />
+        </Box>
+        <TableContainer component={Paper}>
+          <Table>
+            <TableHead>
+              <TableRow>
+                <TableCell>Name</TableCell>
+                <TableCell>Email</TableCell>
+                <TableCell>Phone</TableCell>
+                <TableCell>Address</TableCell>
+                <TableCell>Role</TableCell>
+                <TableCell>Actions</TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {users
+                .filter(user => 
+                  user.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  user.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                )
+                .map((user) => (
+                  <TableRow key={user._id}>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.email}</TableCell>
+                    <TableCell>{user.phone}</TableCell>
+                    <TableCell>
+                      {user.address ? `${user.address.street}, ${user.address.city}, ${user.address.state} ${user.address.zipCode}` : 'N/A'}
+                    </TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>
+                      <Button
+                        variant="contained"
+                        color="primary"
+                        size="small"
+                        onClick={() => handleViewUserOrders(user._id)}
+                        sx={{ mr: 1 }}
+                      >
+                        View Orders
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Box>
-      <TableContainer>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              <TableCell>Email</TableCell>
-              <TableCell>Phone</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {users
-              .filter(user => 
-                user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .map((user) => (
-                <TableRow key={user._id}>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.email}</TableCell>
-                  <TableCell>{user.phone}</TableCell>
-                  <TableCell>
-                    {user.isBlocked ? 'Blocked' : 'Active'}
-                  </TableCell>
-                  <TableCell>
-                    <IconButton size="small" onClick={() => handleBlockUser(user._id)}>
-                      {user.isBlocked ? <CheckCircleIcon /> : <BlockIcon />}
-                    </IconButton>
-                    <IconButton size="small" onClick={() => {
-                      setSelectedUser(user);
-                      setShowUserDialog(true);
-                    }}>
-                      <ViewIcon />
-                    </IconButton>
-                  </TableCell>
-                </TableRow>
-              ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
-    </Paper>
-  );
+    );
+  };
 
   const renderOrdersContent = () => (
     <Paper sx={{ p: 3 }}>
@@ -729,18 +833,206 @@ const AdminDashboard = () => {
     </Paper>
   );
 
-  const renderMenuItems = () => (
-    <Menu
-      anchorEl={anchorEl}
-      open={Boolean(anchorEl)}
-      onClose={handleMenuClose}
-    >
-      <MenuItem onClick={handleMenuClose}>Profile</MenuItem>
-      <Divider />
-      <MenuItem onClick={clearStorage}>Clear Storage</MenuItem>
-      <MenuItem onClick={handleLogout}>Logout</MenuItem>
-    </Menu>
+  const renderStaffContent = () => (
+    <Box>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h5">Staff Management</Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={() => {
+            setSelectedStaff(null);
+            setShowStaffDialog(true);
+          }}
+        >
+          Add Staff
+        </Button>
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              <TableCell>Role</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Phone</TableCell>
+              <TableCell>Completed Orders</TableCell>
+              <TableCell>Current Assignments</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {staff.map((staffMember) => (
+              <TableRow key={staffMember._id}>
+                <TableCell>{staffMember.name}</TableCell>
+                <TableCell>{staffMember.role}</TableCell>
+                <TableCell>{staffMember.email}</TableCell>
+                <TableCell>{staffMember.phone}</TableCell>
+                <TableCell>{staffMember.completedOrders}</TableCell>
+                <TableCell>{staffMember.currentAssignments}</TableCell>
+                <TableCell>
+                  <Chip
+                    label={staffMember.isAvailable ? 'Available' : 'Busy'}
+                    color={staffMember.isAvailable ? 'success' : 'warning'}
+                    size="small"
+                  />
+                </TableCell>
+                <TableCell>
+                  <IconButton
+                    size="small"
+                    onClick={() => {
+                      setSelectedStaff(staffMember);
+                      setShowStaffDialog(true);
+                    }}
+                  >
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton
+                    size="small"
+                    onClick={() => handleDeleteStaff(staffMember._id)}
+                  >
+                    <DeleteIcon />
+                  </IconButton>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+
+      {/* Staff Dialog */}
+      <Dialog open={showStaffDialog} onClose={() => setShowStaffDialog(false)}>
+        <DialogTitle>
+          {selectedStaff ? 'Edit Staff Member' : 'Add New Staff Member'}
+        </DialogTitle>
+        <DialogContent>
+          <Box sx={{ pt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <TextField
+              label="Name"
+              fullWidth
+              defaultValue={selectedStaff?.name || ''}
+              onChange={(e) => setSelectedStaff({ ...selectedStaff, name: e.target.value })}
+            />
+            <FormControl fullWidth margin="normal">
+              <InputLabel>Role</InputLabel>
+              <Select
+                name="role"
+                value={selectedStaff?.role || ''}
+                onChange={(e) => setSelectedStaff({ ...selectedStaff, role: e.target.value })}
+                label="Role"
+              >
+                <MenuItem value="manager">Manager</MenuItem>
+                <MenuItem value="cashier">Cashier</MenuItem>
+                <MenuItem value="cleaning_person">Cleaning Person</MenuItem>
+                <MenuItem value="security_guard">Security Guard</MenuItem>
+                <MenuItem value="delivery_person">Delivery Person</MenuItem>
+                <MenuItem value="washer">Washer</MenuItem>
+                <MenuItem value="ironer">Ironer</MenuItem>
+                <MenuItem value="supervisor">Supervisor</MenuItem>
+                <MenuItem value="receptionist">Receptionist</MenuItem>
+                <MenuItem value="maintenance">Maintenance Staff</MenuItem>
+              </Select>
+            </FormControl>
+            <TextField
+              label="Email"
+              fullWidth
+              defaultValue={selectedStaff?.email || ''}
+              onChange={(e) => setSelectedStaff({ ...selectedStaff, email: e.target.value })}
+            />
+            <TextField
+              label="Phone"
+              fullWidth
+              defaultValue={selectedStaff?.phone || ''}
+              onChange={(e) => setSelectedStaff({ ...selectedStaff, phone: e.target.value })}
+            />
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={selectedStaff?.isAvailable ?? true}
+                  onChange={(e) => setSelectedStaff({ ...selectedStaff, isAvailable: e.target.checked })}
+                />
+              }
+              label="Available"
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowStaffDialog(false)}>Cancel</Button>
+          <Button
+            onClick={() => {
+              if (selectedStaff?._id) {
+                handleUpdateStaff(selectedStaff._id, selectedStaff);
+              } else {
+                handleAddStaff(selectedStaff);
+              }
+            }}
+            variant="contained"
+          >
+            {selectedStaff?._id ? 'Update' : 'Add'}
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </Box>
   );
+
+  const renderMenuItems = () => {
+    return (
+      <List>
+        <ListItem 
+          button 
+          component={Link} 
+          to="/admin-dashboard/dashboard"
+          selected={activeTab === 'dashboard'}
+          onClick={() => handleTabChange('dashboard')}
+        >
+          <ListItemIcon><DashboardIcon /></ListItemIcon>
+          <ListItemText primary="Dashboard" />
+        </ListItem>
+        <ListItem 
+          button 
+          component={Link} 
+          to="/admin-dashboard/users"
+          selected={activeTab === 'users'}
+          onClick={() => handleTabChange('users')}
+        >
+          <ListItemIcon><PeopleIcon /></ListItemIcon>
+          <ListItemText primary="Users" />
+        </ListItem>
+        <ListItem 
+          button 
+          component={Link} 
+          to="/admin-dashboard/orders"
+          selected={activeTab === 'orders'}
+          onClick={() => handleTabChange('orders')}
+        >
+          <ListItemIcon><LaundryIcon /></ListItemIcon>
+          <ListItemText primary="Orders" />
+        </ListItem>
+        <ListItem 
+          button 
+          component={Link} 
+          to="/admin-dashboard/payments"
+          selected={activeTab === 'payments'}
+          onClick={() => handleTabChange('payments')}
+        >
+          <ListItemIcon><PaymentIcon /></ListItemIcon>
+          <ListItemText primary="Payments" />
+        </ListItem>
+        <ListItem 
+          button 
+          component={Link} 
+          to="/admin-dashboard/staff"
+          selected={activeTab === 'staff'}
+          onClick={() => handleTabChange('staff')}
+        >
+          <ListItemIcon><GroupIcon /></ListItemIcon>
+          <ListItemText primary="Staff" />
+        </ListItem>
+      </List>
+    );
+  };
 
   if (loading) {
     return (
@@ -782,83 +1074,46 @@ const AdminDashboard = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: '#f5f5f5', pt: 8 }}>
-      <Container maxWidth="lg">
-        {/* Header */}
-        <Box sx={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center',
-          mb: 4 
-        }}>
-          <Typography variant="h4">
-            {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </Typography>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-            <IconButton onClick={() => setShowNotifications(true)}>
-              <Badge badgeContent={notifications.length} color="error">
-                <NotificationsIcon />
-              </Badge>
-            </IconButton>
-            <Button
-              onClick={handleMenuClick}
-              startIcon={<AccountIcon />}
-              endIcon={<ArrowDropDownIcon />}
-            >
-              {user?.name || 'Admin'}
-            </Button>
-            {renderMenuItems()}
-          </Box>
+    <Box sx={{ display: 'flex' }}>
+      {/* Sidebar */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: 240,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': {
+            width: 240,
+            boxSizing: 'border-box',
+          },
+        }}
+      >
+        <Toolbar />
+        <Box sx={{ overflow: 'auto' }}>
+          {renderMenuItems()}
         </Box>
+      </Drawer>
 
-        {/* Content */}
-        {activeTab === 'dashboard' && renderDashboardContent()}
-        {activeTab === 'users' && renderUsersContent()}
-        {activeTab === 'orders' && renderOrdersContent()}
-        {activeTab === 'payments' && renderPaymentsContent()}
-      </Container>
-
-      {/* Dialogs */}
-      <Dialog open={showServiceDialog} onClose={() => setShowServiceDialog(false)}>
-        <DialogTitle>Add New Service</DialogTitle>
-        <DialogContent>
-          {/* Add service form */}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowServiceDialog(false)}>Cancel</Button>
-          <Button onClick={handleAddService} variant="contained">Add Service</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={showUserDialog} onClose={() => setShowUserDialog(false)}>
-        <DialogTitle>User Details</DialogTitle>
-        <DialogContent>
-          {/* User details */}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowUserDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={showOrderDialog} onClose={() => setShowOrderDialog(false)}>
-        <DialogTitle>Order Details</DialogTitle>
-        <DialogContent>
-          {/* Order details */}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowOrderDialog(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <Dialog open={showNotifications} onClose={() => setShowNotifications(false)}>
-        <DialogTitle>Notifications</DialogTitle>
-        <DialogContent>
-          {/* Notifications list */}
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setShowNotifications(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
+      {/* Main Content */}
+      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
+        <Toolbar />
+        {loading ? (
+          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+            <CircularProgress />
+          </Box>
+        ) : error ? (
+          <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>
+        ) : location.pathname.includes('/admin-dashboard/user/') ? (
+          <Outlet />
+        ) : (
+          <>
+            {activeTab === 'dashboard' && renderDashboardContent()}
+            {activeTab === 'users' && renderUsersContent()}
+            {activeTab === 'orders' && renderOrdersContent()}
+            {activeTab === 'payments' && renderPaymentsContent()}
+            {activeTab === 'staff' && renderStaffContent()}
+          </>
+        )}
+      </Box>
     </Box>
   );
 };
