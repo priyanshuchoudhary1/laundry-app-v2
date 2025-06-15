@@ -5,6 +5,7 @@ import Register from './pages/Register';
 import Home from './pages/Home';
 import AdminDashboard from './pages/AdminDashboard';
 import UserOrderHistory from './pages/UserOrderHistory';
+import AdminReviews from './pages/AdminReviews';
 import { AuthProvider, useAuth } from './context/AuthContext';
 
 // Protected Route Component
@@ -37,23 +38,17 @@ function App() {
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/" element={<Home />} />
+          <Route path="/user-dashboard" element={<UserDashboard />} />
 
           {/* Admin Routes */}
-          <Route
-            path="/admin-dashboard"
-            element={
-              <AdminRoute>
-                <AdminDashboard />
-              </AdminRoute>
-            }
-          >
+          <Route path="/admin-dashboard" element={<AdminDashboard />}>
             <Route index element={<Navigate to="dashboard" replace />} />
             <Route path="dashboard" element={<AdminDashboard />} />
             <Route path="users" element={<AdminDashboard />} />
             <Route path="orders" element={<AdminDashboard />} />
             <Route path="staff" element={<AdminDashboard />} />
             <Route path="payments" element={<AdminDashboard />} />
-            <Route path="user/:userId" element={<UserOrderHistory />} />
+            <Route path="user/:userId" element={<AdminDashboard />} />
           </Route>
 
           {/* Catch all route */}

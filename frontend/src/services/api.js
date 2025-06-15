@@ -192,4 +192,38 @@ export const cancelOrder = async (orderId) => {
   } catch (error) {
     throw error;
   }
+};
+
+// Review API calls
+export const submitReview = async (reviewData) => {
+  try {
+    const response = await api.post('/reviews', {
+      type: 'review',
+      ...reviewData
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const submitFeedback = async (feedbackData) => {
+  try {
+    const response = await api.post('/reviews', {
+      type: 'feedback',
+      ...feedbackData
+    });
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getPublicReviews = async () => {
+  try {
+    const response = await api.get('/reviews/public');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
 }; 

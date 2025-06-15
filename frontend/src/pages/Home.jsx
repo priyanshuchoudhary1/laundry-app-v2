@@ -1,18 +1,37 @@
 import React, { useState } from "react";
-import { FaTshirt, FaShippingFast, FaCheckCircle, FaCalendarAlt, FaStar, FaLeaf, FaUsers, FaClock, FaMapMarkerAlt, FaSearch } from "react-icons/fa";
-import { Link } from "react-router-dom";
+import { FaTshirt, FaShippingFast, FaCheckCircle, FaCalendarAlt, FaStar, FaLeaf, FaUsers, FaClock, FaMapMarkerAlt, FaSearch, FaTimes } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from '../context/AuthContext';
+import { Snackbar, Alert } from '@mui/material';
 import '../styles/pages/Home.css';
 import heroImage from "../assets/engin-akyurt-yCYVV8-kQNM-unsplash.jpg";
 import ManishPic from "../assets/ManishPic.JPG";
 import AshuPic from "../assets/AshuPic.JPG";
+import { submitReview, submitFeedback } from '../services/api';
 
 const Home = () => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
   const [pincode, setPincode] = useState('');
   const [selectedCity, setSelectedCity] = useState('');
   const [availabilityStatus, setAvailabilityStatus] = useState(null);
   const [isChecking, setIsChecking] = useState(false);
   const [error, setError] = useState('');
   const [locationDetails, setLocationDetails] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [feedback, setFeedback] = useState({
+    name: '',
+    email: '',
+    message: ''
+  });
+  const [review, setReview] = useState({
+    rating: 0,
+    message: ''
+  });
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
+  const [reviewSubmitted, setReviewSubmitted] = useState(false);
+  const [showLoginAlert, setShowLoginAlert] = useState(false);
 
   const popularCities = [
     { name: 'Delhi', pincode: '110001' },
@@ -120,6 +139,86 @@ const Home = () => {
     setAvailabilityStatus(null);
     setLocationDetails(null);
     setSelectedCity(''); // Clear selected city when input changes
+  };
+
+  const handleFeedbackChange = (e) => {
+    const { id, value } = e.target;
+    setFeedback(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleReviewChange = (e) => {
+    const { id, value } = e.target;
+    setReview(prev => ({
+      ...prev,
+      [id]: value
+    }));
+  };
+
+  const handleStarHover = (starIndex) => {
+    setHoveredStar(starIndex);
+  };
+
+  const handleStarClick = (starIndex) => {
+    setReview(prev => ({
+      ...prev,
+      rating: starIndex
+    }));
+  };
+
+  const handleFeedbackSubmit = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      setShowLoginAlert(true);
+      return;
+    }
+    try {
+      await submitFeedback(feedback);
+      setFeedbackSubmitted(true);
+      setFeedback({
+        name: '',
+        email: '',
+        message: ''
+      });
+      setTimeout(() => setFeedbackSubmitted(false), 3000);
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+    }
+  };
+
+  const handleReviewSubmit = async (e) => {
+    e.preventDefault();
+    if (!user) {
+      setShowLoginAlert(true);
+      return;
+    }
+    try {
+      await submitReview(review);
+      setReviewSubmitted(true);
+      setReview({
+        rating: 0,
+        message: ''
+      });
+      setTimeout(() => setReviewSubmitted(false), 3000);
+    } catch (error) {
+      console.error('Error submitting review:', error);
+    }
+  };
+
+  const handleLoginRedirect = () => {
+    navigate('/login');
+  };
+
+  const openModal = () => {
+    setIsModalOpen(true);
+    document.body.style.overflow = 'hidden'; // Prevent scrolling when modal is open
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    document.body.style.overflow = 'auto'; // Re-enable scrolling
   };
 
   const processImage = "https://images.unsplash.com/photo-1582735689369-4fe89db7114c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80";
@@ -335,6 +434,143 @@ const Home = () => {
           </Link>
         </div>
       </section>
+
+      {/* Feedback Button */}
+      <div className="feedback-button-container">
+        <button className="feedback-button" onClick={openModal}>
+          Feedback & Review
+        </button>
+      </div>
+
+      {/* Feedback Modal */}
+      {isModalOpen && (
+        <div className="modal-overlay" onClick={closeModal}>
+          <div className="modal-content" onClick={e => e.stopPropagation()}>
+            <button className="modal-close" onClick={closeModal}>
+              <FaTimes />
+            </button>
+            
+            <div className="feedback-container">
+              <div className="feedback-content">
+                <h2 className="section-title">Share Your Experience</h2>
+                <p className="section-subtitle">We value your feedback and reviews</p>
+                
+                <div className="feedback-grid">
+                  {/* Feedback Form */}
+                  <div className="feedback-form-container">
+                    <h3>Send Us Feedback</h3>
+                    <form className="feedback-form" onSubmit={handleFeedbackSubmit}>
+                      <div className="form-group">
+                        <label htmlFor="name">Name</label>
+                        <input
+                          type="text"
+                          id="name"
+                          placeholder="Your name"
+                          value={feedback.name}
+                          onChange={handleFeedbackChange}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="email">Email</label>
+                        <input
+                          type="email"
+                          id="email"
+                          placeholder="Your email"
+                          value={feedback.email}
+                          onChange={handleFeedbackChange}
+                          required
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor="message">Your Feedback</label>
+                        <textarea
+                          id="message"
+                          rows="4"
+                          placeholder="Share your thoughts with us..."
+                          value={feedback.message}
+                          onChange={handleFeedbackChange}
+                          required
+                        ></textarea>
+                      </div>
+                      <button type="submit" className="submit-feedback-btn">
+                        {feedbackSubmitted ? 'Thank you for your feedback!' : 'Submit Feedback'}
+                      </button>
+                    </form>
+                  </div>
+
+                  {/* Review Section */}
+                  <div className="review-section">
+                    <h3>Write a Review</h3>
+                    <div className="review-form">
+                      <div className="rating-input">
+                        <label>Your Rating</label>
+                        <div className="star-rating">
+                          {[1, 2, 3, 4, 5].map((star) => (
+                            <FaStar
+                              key={star}
+                              className={`star ${(hoveredStar >= star || review.rating >= star) ? 'active' : ''}`}
+                              onMouseEnter={() => handleStarHover(star)}
+                              onMouseLeave={() => handleStarHover(0)}
+                              onClick={() => handleStarClick(star)}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <form onSubmit={handleReviewSubmit}>
+                        <div className="form-group">
+                          <label htmlFor="review">Your Review</label>
+                          <textarea
+                            id="review"
+                            rows="4"
+                            placeholder="Share your experience with our service..."
+                            value={review.message}
+                            onChange={handleReviewChange}
+                            required
+                          ></textarea>
+                        </div>
+                        <button type="submit" className="submit-review-btn">
+                          {reviewSubmitted ? 'Thank you for your review!' : 'Submit Review'}
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Login Alert Snackbar */}
+      <Snackbar
+        open={showLoginAlert}
+        autoHideDuration={3000}
+        onClose={() => setShowLoginAlert(false)}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert 
+          onClose={() => setShowLoginAlert(false)} 
+          severity="info" 
+          sx={{ width: '100%' }}
+          action={
+            <button 
+              onClick={handleLoginRedirect}
+              style={{ 
+                background: 'none', 
+                border: 'none', 
+                color: '#1976d2', 
+                cursor: 'pointer',
+                fontWeight: 'bold'
+              }}
+            >
+              Login Now
+            </button>
+          }
+        >
+          Please login to submit reviews and feedback!
+        </Alert>
+      </Snackbar>
     </div>
   );
 };

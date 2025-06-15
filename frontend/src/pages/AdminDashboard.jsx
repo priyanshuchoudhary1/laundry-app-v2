@@ -45,7 +45,9 @@ import {
   Chip,
   Alert,
   Drawer,
-  Toolbar
+  Toolbar,
+  CssBaseline,
+  AppBar
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -65,14 +67,21 @@ import {
   Payment as PaymentIcon,
   Add as AddIcon,
   Save as SaveIcon,
-  Group as GroupIcon
+  Group as GroupIcon,
+  RateReview as ReviewIcon,
+  Menu as MenuIcon,
+  Star as StarIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { Link } from 'react-router-dom';
+import { useTheme } from '@mui/material/styles';
 
 const AdminDashboard = () => {
+  const drawerWidth = 240;
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const theme = useTheme();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -88,6 +97,7 @@ const AdminDashboard = () => {
   const [showOrderDialog, setShowOrderDialog] = useState(false);
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   // Stats state
   const [stats, setStats] = useState({
@@ -111,6 +121,11 @@ const AdminDashboard = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState('all');
   const [paymentMethodFilter, setPaymentMethodFilter] = useState('all');
 
+  // Reviews state
+  const [reviews, setReviews] = useState([]);
+  const [reviewStatusFilter, setReviewStatusFilter] = useState('all');
+  const [reviewTypeFilter, setReviewTypeFilter] = useState('all');
+
   // Menu handlers
   const handleMenuClick = (event) => {
     setAnchorEl(event.currentTarget);
@@ -133,33 +148,25 @@ const AdminDashboard = () => {
   };
 
   const handleTabChange = (tab) => {
-    if (tab !== activeTab) {
-      setActiveTab(tab);
+    setActiveTab(tab);
+    if (tab === 'reviews') {
+      fetchReviews();
+    } else {
       navigate(`/admin-dashboard/${tab}`, { replace: true });
     }
   };
 
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
   // Get current path and set initial tab
   useEffect(() => {
-    const path = location.pathname;
-    console.log('Current path:', path);
-    
-    if (path.includes('/admin-dashboard/user/')) {
-      // Don't change the active tab when viewing user orders
-      return;
+    const path = location.pathname.split('/').pop();
+    if (path && path !== 'admin-dashboard') {
+      setActiveTab(path);
     }
-    
-    const pathParts = path.split('/');
-    const currentPath = pathParts[pathParts.length - 1];
-    
-    if (currentPath === 'admin-dashboard') {
-      setActiveTab('dashboard');
-      navigate('/admin-dashboard/dashboard', { replace: true });
-    } else if (currentPath && currentPath !== activeTab && 
-               ['dashboard', 'users', 'orders', 'staff', 'payments'].includes(currentPath)) {
-      setActiveTab(currentPath);
-    }
-  }, [location.pathname, navigate, activeTab]);
+  }, [location.pathname]);
 
   // Verify authentication and fetch data
   useEffect(() => {
@@ -211,7 +218,7 @@ const AdminDashboard = () => {
       console.log('Making API calls with headers:', headers);
 
       // Fetch all data in parallel
-      const [statsResponse, usersResponse, ordersResponse, servicesResponse, paymentsResponse, staffResponse] = await Promise.all([
+      const [statsResponse, usersResponse, ordersResponse, servicesResponse, paymentsResponse, staffResponse, reviewsResponse] = await Promise.all([
         fetch('http://localhost:4000/api/admin/stats', {
           headers
         }),
@@ -229,6 +236,9 @@ const AdminDashboard = () => {
         }),
         fetch('http://localhost:4000/api/admin/staff', {
           headers
+        }),
+        fetch('http://localhost:4000/api/reviews/admin', {
+          headers
         })
       ]);
 
@@ -239,7 +249,8 @@ const AdminDashboard = () => {
         orders: ordersResponse.status,
         services: servicesResponse.status,
         payments: paymentsResponse.status,
-        staff: staffResponse.status
+        staff: staffResponse.status,
+        reviews: reviewsResponse.status
       });
 
       // Check each response individually
@@ -267,15 +278,20 @@ const AdminDashboard = () => {
         const errorData = await staffResponse.json();
         throw new Error(`Staff API error: ${errorData.message}`);
       }
+      if (!reviewsResponse.ok) {
+        const errorData = await reviewsResponse.json();
+        throw new Error(`Reviews API error: ${errorData.message}`);
+      }
 
       // Parse all responses
-      const [statsData, usersData, ordersData, servicesData, paymentsData, staffData] = await Promise.all([
+      const [statsData, usersData, ordersData, servicesData, paymentsData, staffData, reviewsData] = await Promise.all([
         statsResponse.json(),
         usersResponse.json(),
         ordersResponse.json(),
         servicesResponse.json(),
         paymentsResponse.json(),
-        staffResponse.json()
+        staffResponse.json(),
+        reviewsResponse.json()
       ]);
 
       // Log parsed data
@@ -285,7 +301,8 @@ const AdminDashboard = () => {
         orders: ordersData,
         services: servicesData,
         payments: paymentsData,
-        staff: staffData
+        staff: staffData,
+        reviews: reviewsData
       });
 
       // Update state with fetched data
@@ -295,6 +312,7 @@ const AdminDashboard = () => {
       setServices(servicesData.services || []);
       setPayments(paymentsData.payments || []);
       setStaff(staffData.staff || []);
+      setReviews(reviewsData.data || []);
       setLoading(false);
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
@@ -306,6 +324,51 @@ const AdminDashboard = () => {
         localStorage.removeItem('token');
         navigate('/login');
       }
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch('http://localhost:4000/api/reviews/admin', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch reviews');
+      }
+
+      const data = await response.json();
+      setReviews(data.data || []);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const handleUpdateReviewStatus = async (reviewId, newStatus) => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await fetch(`http://localhost:4000/api/reviews/${reviewId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ status: newStatus })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update review status');
+      }
+
+      setReviews(reviews.map(review => 
+        review._id === reviewId ? { ...review, status: newStatus } : review
+      ));
+    } catch (err) {
+      setError(err.message);
     }
   };
 
@@ -977,142 +1040,346 @@ const AdminDashboard = () => {
     </Box>
   );
 
-  const renderMenuItems = () => {
-    return (
-      <List>
-        <ListItem 
-          button 
-          component={Link} 
-          to="/admin-dashboard/dashboard"
-          selected={activeTab === 'dashboard'}
-          onClick={() => handleTabChange('dashboard')}
-        >
-          <ListItemIcon><DashboardIcon /></ListItemIcon>
-          <ListItemText primary="Dashboard" />
-        </ListItem>
-        <ListItem 
-          button 
-          component={Link} 
-          to="/admin-dashboard/users"
-          selected={activeTab === 'users'}
-          onClick={() => handleTabChange('users')}
-        >
-          <ListItemIcon><PeopleIcon /></ListItemIcon>
-          <ListItemText primary="Users" />
-        </ListItem>
-        <ListItem 
-          button 
-          component={Link} 
-          to="/admin-dashboard/orders"
-          selected={activeTab === 'orders'}
-          onClick={() => handleTabChange('orders')}
-        >
-          <ListItemIcon><LaundryIcon /></ListItemIcon>
-          <ListItemText primary="Orders" />
-        </ListItem>
-        <ListItem 
-          button 
-          component={Link} 
-          to="/admin-dashboard/payments"
-          selected={activeTab === 'payments'}
-          onClick={() => handleTabChange('payments')}
-        >
-          <ListItemIcon><PaymentIcon /></ListItemIcon>
-          <ListItemText primary="Payments" />
-        </ListItem>
-        <ListItem 
-          button 
-          component={Link} 
-          to="/admin-dashboard/staff"
-          selected={activeTab === 'staff'}
-          onClick={() => handleTabChange('staff')}
-        >
-          <ListItemIcon><GroupIcon /></ListItemIcon>
-          <ListItemText primary="Staff" />
-        </ListItem>
-      </List>
-    );
-  };
-
-  if (loading) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh' 
-      }}>
-        <CircularProgress />
-      </Box>
-    );
-  }
-
-  if (error) {
-    return (
-      <Box sx={{ 
-        display: 'flex', 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        minHeight: '100vh',
-        flexDirection: 'column',
-        gap: 2
-      }}>
-        <Typography color="error" variant="h6">
-          {error}
+  const renderReviewsContent = () => (
+    <Box sx={{ p: 3 }}>
+      <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Typography variant="h4" component="h1" gutterBottom>
+          Reviews & Feedback Management
         </Typography>
-        <Button 
-          variant="contained" 
-          onClick={() => {
-            setError(null);
-            fetchDashboardData();
-          }}
+        <Button
+          variant="outlined"
+          startIcon={<RefreshIcon />}
+          onClick={fetchReviews}
         >
-          Retry
+          Refresh
         </Button>
       </Box>
-    );
-  }
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 2 }}>
+          {error}
+        </Alert>
+      )}
+
+      <Box sx={{ mb: 3, display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+        <TextField
+          label="Search"
+          variant="outlined"
+          size="small"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          sx={{ minWidth: 200 }}
+          InputProps={{
+            startAdornment: (
+              <InputAdornment position="start">
+                <SearchIcon />
+              </InputAdornment>
+            ),
+          }}
+        />
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Status</InputLabel>
+          <Select
+            value={reviewStatusFilter}
+            label="Status"
+            onChange={(e) => setReviewStatusFilter(e.target.value)}
+          >
+            <MenuItem value="all">All Status</MenuItem>
+            <MenuItem value="pending">Pending</MenuItem>
+            <MenuItem value="approved">Approved</MenuItem>
+            <MenuItem value="rejected">Rejected</MenuItem>
+          </Select>
+        </FormControl>
+        <FormControl size="small" sx={{ minWidth: 120 }}>
+          <InputLabel>Type</InputLabel>
+          <Select
+            value={reviewTypeFilter}
+            label="Type"
+            onChange={(e) => setReviewTypeFilter(e.target.value)}
+          >
+            <MenuItem value="all">All Types</MenuItem>
+            <MenuItem value="review">Reviews</MenuItem>
+            <MenuItem value="feedback">Feedback</MenuItem>
+          </Select>
+        </FormControl>
+      </Box>
+
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Type</TableCell>
+              <TableCell>Name</TableCell>
+              <TableCell>Email</TableCell>
+              <TableCell>Rating</TableCell>
+              <TableCell>Message</TableCell>
+              <TableCell>Status</TableCell>
+              <TableCell>Date</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {reviews
+              .filter(review => {
+                const matchesStatus = reviewStatusFilter === 'all' || review.status === reviewStatusFilter;
+                const matchesType = reviewTypeFilter === 'all' || review.type === reviewTypeFilter;
+                const matchesSearch = searchQuery === '' || 
+                  review.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  review.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                  review.message.toLowerCase().includes(searchQuery.toLowerCase());
+                
+                return matchesStatus && matchesType && matchesSearch;
+              })
+              .map((review) => (
+                <TableRow key={review._id}>
+                  <TableCell>
+                    <Chip 
+                      label={review.type === 'review' ? 'Review' : 'Feedback'}
+                      color={review.type === 'review' ? 'primary' : 'secondary'}
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>{review.name}</TableCell>
+                  <TableCell>{review.email}</TableCell>
+                  <TableCell>
+                    {review.type === 'review' && (
+                      <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        {[...Array(5)].map((_, index) => (
+                          <StarIcon
+                            key={index}
+                            sx={{
+                              color: index < review.rating ? '#fbbf24' : '#e5e7eb',
+                              fontSize: '1rem'
+                            }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Typography
+                      sx={{
+                        maxWidth: '400px',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'normal',
+                        minHeight: '50px',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 3,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: '1.5',
+                        padding: '8px'
+                      }}
+                    >
+                      {review.message}
+                    </Typography>
+                  </TableCell>
+                  <TableCell>
+                    <Chip
+                      label={review.status}
+                      color={
+                        review.status === 'approved'
+                          ? 'success'
+                          : review.status === 'rejected'
+                          ? 'error'
+                          : 'warning'
+                      }
+                      size="small"
+                    />
+                  </TableCell>
+                  <TableCell>
+                    {new Date(review.createdAt).toLocaleDateString()}
+                  </TableCell>
+                  <TableCell>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {review.status === 'pending' && (
+                        <>
+                          <IconButton
+                            size="small"
+                            color="success"
+                            onClick={() => handleUpdateReviewStatus(review._id, 'approved')}
+                            title="Approve"
+                          >
+                            <CheckCircleIcon />
+                          </IconButton>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            onClick={() => handleUpdateReviewStatus(review._id, 'rejected')}
+                            title="Reject"
+                          >
+                            <CancelIcon />
+                          </IconButton>
+                        </>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </Box>
+  );
+
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'dashboard':
+        return renderDashboardContent();
+      case 'users':
+        return renderUsersContent();
+      case 'orders':
+        return renderOrdersContent();
+      case 'staff':
+        return renderStaffContent();
+      case 'payments':
+        return renderPaymentsContent();
+      case 'reviews':
+        return renderReviewsContent();
+      default:
+        return renderDashboardContent();
+    }
+  };
+
+  const renderMenuItems = () => (
+    <List sx={{ 
+      mt: '64px',
+      pt: 2
+    }}>
+      <ListItem
+        button
+        selected={activeTab === 'dashboard'}
+        onClick={() => handleTabChange('dashboard')}
+      >
+        <ListItemIcon>
+          <DashboardIcon />
+        </ListItemIcon>
+        <ListItemText primary="Dashboard" />
+      </ListItem>
+      <ListItem
+        button
+        selected={activeTab === 'users'}
+        onClick={() => handleTabChange('users')}
+      >
+        <ListItemIcon>
+          <PeopleIcon />
+        </ListItemIcon>
+        <ListItemText primary="Users" />
+      </ListItem>
+      <ListItem
+        button
+        selected={activeTab === 'orders'}
+        onClick={() => handleTabChange('orders')}
+      >
+        <ListItemIcon>
+          <LaundryIcon />
+        </ListItemIcon>
+        <ListItemText primary="Orders" />
+      </ListItem>
+      <ListItem
+        button
+        selected={activeTab === 'staff'}
+        onClick={() => handleTabChange('staff')}
+      >
+        <ListItemIcon>
+          <GroupIcon />
+        </ListItemIcon>
+        <ListItemText primary="Staff" />
+      </ListItem>
+      <ListItem
+        button
+        selected={activeTab === 'payments'}
+        onClick={() => handleTabChange('payments')}
+      >
+        <ListItemIcon>
+          <PaymentIcon />
+        </ListItemIcon>
+        <ListItemText primary="Payments" />
+      </ListItem>
+      <ListItem
+        button
+        selected={activeTab === 'reviews'}
+        onClick={() => handleTabChange('reviews')}
+      >
+        <ListItemIcon>
+          <ReviewIcon />
+        </ListItemIcon>
+        <ListItemText primary="Reviews & Feedback" />
+      </ListItem>
+    </List>
+  );
 
   return (
-    <Box sx={{ display: 'flex' }}>
-      {/* Sidebar */}
-      <Drawer
-        variant="permanent"
-        sx={{
-          width: 240,
-          flexShrink: 0,
-          '& .MuiDrawer-paper': {
-            width: 240,
-            boxSizing: 'border-box',
-          },
+    <Box sx={{ display: 'flex', height: '100vh' }}>
+      <CssBaseline />
+      <Box
+        component="nav"
+        sx={{ 
+          width: { sm: drawerWidth }, 
+          flexShrink: { sm: 0 },
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          height: '100vh'
         }}
       >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto' }}>
+        <Drawer
+          variant="temporary"
+          open={mobileOpen}
+          onClose={handleDrawerToggle}
+          ModalProps={{
+            keepMounted: true,
+          }}
+          sx={{
+            display: { xs: 'block', sm: 'none' },
+            '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
+          }}
+        >
           {renderMenuItems()}
+        </Drawer>
+        <Drawer
+          variant="permanent"
+          sx={{
+            display: { xs: 'none', sm: 'block' },
+            '& .MuiDrawer-paper': { 
+              boxSizing: 'border-box', 
+              width: drawerWidth,
+              position: 'fixed',
+              left: 0,
+              top: 0,
+              height: '100vh'
+            },
+          }}
+          open
+        >
+          {renderMenuItems()}
+        </Drawer>
+      </Box>
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          bgcolor: '#f5f5f5',
+          minHeight: '100vh',
+          marginLeft: { sm: `${drawerWidth}px` },
+          width: { sm: `calc(100% - ${drawerWidth}px)` }
+        }}
+      >
+        <Box sx={{ p: 3 }}>
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <CircularProgress />
+            </Box>
+          ) : error ? (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          ) : location.pathname.includes('/admin-dashboard/reviews') ? (
+            <Outlet />
+          ) : (
+            renderContent()
+          )}
         </Box>
-      </Drawer>
-
-      {/* Main Content */}
-      <Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-        <Toolbar />
-        {loading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
-            <CircularProgress />
-          </Box>
-        ) : error ? (
-          <Typography color="error" sx={{ mt: 2 }}>{error}</Typography>
-        ) : location.pathname.includes('/admin-dashboard/user/') ? (
-          <Outlet />
-        ) : (
-          <>
-            {activeTab === 'dashboard' && renderDashboardContent()}
-            {activeTab === 'users' && renderUsersContent()}
-            {activeTab === 'orders' && renderOrdersContent()}
-            {activeTab === 'payments' && renderPaymentsContent()}
-            {activeTab === 'staff' && renderStaffContent()}
-          </>
-        )}
       </Box>
     </Box>
   );
