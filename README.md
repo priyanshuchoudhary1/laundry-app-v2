@@ -135,7 +135,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Contact
 
-Priyanshu Choudhary - priyanshuchoudhary1@gmail.com
+Priyanshu Choudhary - priyanshuofficial504@gmail.com
 
 Project Link: [https://github.com/priyanshuchoudhary1/laundry-app-v2](https://github.com/priyanshuchoudhary1/laundry-app-v2)
 
