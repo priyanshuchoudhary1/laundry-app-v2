@@ -4,7 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from '../context/AuthContext';
 import { Snackbar, Alert } from '@mui/material';
 import '../styles/pages/Home.css';
-import heroImage from "../assets/engin-akyurt-yCYVV8-kQNM-unsplash.jpg";
+import heroImage from "../assets/front.mp4";
 import ManishPic from "../assets/ManishPic.JPG";
 import AshuPic from "../assets/AshuPic.JPG";
 import { submitReview, submitFeedback } from '../services/api';
@@ -40,7 +40,9 @@ const Home = () => {
     { name: 'Hyderabad', pincode: '500001' },
     { name: 'Chennai', pincode: '600001' },
     { name: 'Kolkata', pincode: '700001' },
-    { name: 'Patna', pincode: '800001' }
+    { name: 'Patna', pincode: '800001' },
+    { name: 'Haryana', pincode: '122001' },
+    { name: 'Chandigarh', pincode: '160001' },
   ];
 
   // List of pincodes where service is available
@@ -58,7 +60,11 @@ const Home = () => {
     // Kolkata
     '700001', '700002', '700003', '700004', '700005', '700006', '700007', '700008', '700009', '700010',
     // Patna
-    '800001', '800002', '800003', '800004', '800005', '800006', '800007', '800008', '800009', '800010'
+    '800001', '800002', '800003', '800004', '800005', '800006', '800007', '800008', '800009', '800010','844101',
+    // Haryana
+    '122001', '122002', '122003', '122004', '122005', '122006', '122007', '122008', '122009', '122010',
+    // Chandigarh
+    '160001', '160002', '160003', '160004', '160005', '160006', '160007', '160008', '160009', '160010'
   ];
 
   const validatePincode = async (code) => {
@@ -227,11 +233,40 @@ const Home = () => {
   return (
     <div className="home-container">
       {/* Hero Banner */}
-      <section 
-        className="hero-banner"
-        style={{ backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.4)), url(${heroImage})` }}
-      >
-        <div className="hero-content">
+      <section className="hero-banner" style={{ position: 'relative' }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 0
+        }}>
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          >
+            <source src={heroImage} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          zIndex: 1
+        }}></div>
+        <div className="hero-content" style={{ position: 'relative', zIndex: 2 }}>
           <h1 className="hero-title">Premium Laundry Care</h1>
           <p className="hero-subtitle">
             Experience the perfect blend of quality, speed, and convenience for all your laundry needs
@@ -421,12 +456,40 @@ const Home = () => {
       </section>
 
       {/* CTA Section */}
-      <section className="cta-section" style={{ 
-        background: `linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url(${heroImage})`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center'
-      }}>
-        <div className="cta-content">
+      <section className="cta-section" style={{ position: 'relative' }}>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          zIndex: 0
+        }}>
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          >
+            <source src={heroImage} type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+        </div>
+        <div style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          zIndex: 1
+        }}></div>
+        <div className="cta-content" style={{ position: 'relative', zIndex: 2 }}>
           <h2>Ready to Experience Premium Laundry Care?</h2>
           <p>Join thousands of satisfied customers who trust us with their garments</p>
           <Link to="/services" className="cta-button primary">
