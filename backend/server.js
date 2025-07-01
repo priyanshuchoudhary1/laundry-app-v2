@@ -23,7 +23,12 @@ const NODE_ENV = process.env.NODE_ENV || 'development';
 // CORS configuration
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
   ? process.env.ALLOWED_ORIGINS.split(',') 
-  : ['http://localhost:3000', 'http://localhost:5173', 'http://localhost:4001'];
+  : [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://localhost:4001',
+    'https://laundry-app-v2-frontend.vercel.app'
+  ];
 
 const userRoutes = require('./routes/userRoutes');
 const orderRoutes = require('./routes/orderRoutes');
